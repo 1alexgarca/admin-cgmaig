@@ -1,0 +1,99 @@
+@import './base.css';
+
+#app {
+  /* max-width: 1280px; */
+  /* margin: 0 auto;
+  padding: 2rem; */
+  font-weight: normal;
+}
+
+a,
+.green {
+  text-decoration: none;
+  color: hsla(160, 100%, 37%, 1);
+  transition: 0.4s;
+  padding: 3px;
+}
+
+@media (hover: hover) {
+  a:hover {
+    background-color: hsla(160, 100%, 37%, 0.2);
+  }
+}
+
+/* @media (min-width: 1024px) {
+  body {
+    display: flex;
+    place-items: center;
+  }
+
+  #app {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 0 2rem;
+  }
+} */
+
+
+/* Estilo general del toast */
+.custom-toast-class {
+  background-color: rgba(254, 255, 255, 0.85); /* Fondo blanco muy translúcido */
+  color: #333;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(6px); /* Suave difuminado de fondo */
+  animation: pulse-toast 0.4s ease-in-out;
+}
+
+/* Cuerpo del mensaje */
+.custom-toast-body {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* Ícono animado */
+.vue-toastification__icon {
+  animation: spin-icon 1.2s infinite ease-in-out;
+}
+
+/* Animación para el ícono */
+@keyframes spin-icon {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(5deg); }
+}
+
+/* Animación de entrada */
+@keyframes pulse-toast {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+
+.gobPrimary {
+  background-color: rgb(105, 28, 32);
+}
+.gobSecondary {
+  background-color: rgb(16, 49, 43);
+}
+.gobTertiary {
+  background-color: rgb(188, 149, 92);
+}
+.gobGray {
+  background-color: rgb(111, 114, 113);
+}
+
+.content-view {
+  padding: 3rem 2rem 0rem 2rem;
+  height: 100%;
+  min-height: calc(100vh - 4rem);
+  background-color: rgba(111, 114, 113, 0.01);
+}
+.btn-segob{
+  background: rgb(105, 28, 32);
+}
