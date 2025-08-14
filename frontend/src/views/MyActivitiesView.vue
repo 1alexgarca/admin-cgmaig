@@ -69,10 +69,11 @@
                     </thead>
                     <tbody class="small">
                         <tr 
-                        v-for="task in paginatedTasks" 
-                        :key="task.id_activities" 
-                        @click="openActivity(task)"
-                        style="cursor: pointer;">
+                            v-for="task in paginatedTasks" 
+                            :key="task.id_activities" 
+                            @click="openActivity(task)"
+                            style="cursor: pointer;"
+                        >
                             <td class="text-center">
                                 <i v-if="task.avance === 100" class="bi bi-check2-circle text-success fs-4" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Completado"></i>
                                 <i v-else="task.avance < 100" class="bi bi-hourglass-split text-warning fs-4 spin-hourglass" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="En proceso"></i>

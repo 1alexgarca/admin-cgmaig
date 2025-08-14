@@ -1,34 +1,5 @@
 <template>
   <div class="content-view">
-
-      <!-- Encabezado responsive -->
-      <!-- <div class="d-flex justify-content-end align-items-center mb-4">
-
-        <div class="row">
-          <div class="col">
-            <input type="date" class="form-control">
-          </div>
-          <div class="col">
-            <input type="date" class="form-control">
-          </div>
-          <div class="col">
-            <button type="button" class="btn form-label border" style="background-color: #93134c; color: white;">Exportar</button>
-          </div>
-        </div>
-      </div> -->
-
-
-      
-      
-      <div class="input-group mb-3 d-flex justify-content-end ">
-        <input ref="datePicker" type="text" class="form-control" placeholder="Selecciona rango de fechas" aria-label="Recipient’s username" aria-describedby="button-addon2">
-        <button class="btn btn-outline-success" type="button">Exportar</button>
-      </div>
-
-      
- 
-    
-
     <!-- Tarjetas responsive -->
     <div class="row g-3 mb-4">
       <!-- Tarjeta Totales -->
@@ -81,40 +52,48 @@
     
     <div class="row g-3">
 
-    <!-- ----------------------------------------------------------- -->
+    <!--------------------------------------------------------------->
                         <!-- HORAS Y ASISTENCIAS -->
-    <!-- ----------------------------------------------------------- -->
-<div class="col-12 col-md-6 col-lg-4">
-  <div class="card rounded-4">
-    <div class="card-body">
-      <!-- Header con título y botones -->
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <div class="title">
-          <h5 class="card-title mb-0">Horas y asistencia</h5>
-        </div>
-        <div>
-          <button class="btn btn-outline-dark border-0 me-1"><i class="bi bi-search"></i></button>
-          <button class="btn btn-outline-dark border-0"><i class="bi bi-three-dots-vertical"></i></button>
+    <!--------------------------------------------------------------->
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="card rounded-4 shadow-sm">
+        <div class="card-body">
+          <div>
+            <!-- Encabezado -->
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="title">
+                <h5 class="card-title">Horas y asistencia</h5>
+              </div>
+              <div>
+                <!-- Botón de búsqueda -->
+                <button class="btn btn-outline-dark border-0 me-2" @click="toggleSearch('horas')">
+                  <i class="bi bi-search"></i>
+                </button>
+                <button class="btn btn-outline-dark border-0">
+                  <i class="bi bi-three-dots-vertical"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Campo de búsqueda -->
+            <div v-show="searchHoras" class="mt-2">
+              <input type="text" class="form-control" placeholder="Buscar persona" v-model="horasSearch">
+            </div>
+
+            <!-- Horas trabajadas -->
+            <h6 class="mt-3">
+              <span class="badge text-bg-secondary">10</span> Hrs trabajadas
+            </h6>
+          </div>
         </div>
       </div>
-
-      <!-- Barra de búsqueda -->
-      <div class="mb-3">
-        <input type="text" class="form-control" placeholder="Buscar usuario...">
-      </div>
-
-      <!-- Información de horas -->
-      <h6>
-        <span class="badge text-bg-secondary">10</span> Hrs trabajadas
-      </h6>
     </div>
-  </div>
-</div>
 
 
-    <!-- ----------------------------------------------------------- -->
+
+    <!--------------------------------------------------------------->
                         <!-- PRODUCTIVIDAD Y AVANCE  -->
-    <!-- ----------------------------------------------------------- -->
+    <!--------------------------------------------------------------->
       <div class="col-12 col-md-6 col-lg-4">
         <div class="card rounded-4">
           <div class="card-body">
@@ -124,11 +103,17 @@
                   <h5 class="card-title">Productividad y avance</h5>
                 </div>
                 <div>
-                  <button class="btn btn-outline-dark border-0"><i class="bi bi-search"></i></button>
+                  <button class="btn btn-outline-dark border-0" @click="toggleSearch('productividad')">
+                    <i class="bi bi-search"></i>
+                  </button>
                   <button class="btn btn-outline-dark border-0">
                     <i class="bi bi-three-dots-vertical"></i>
                   </button>
                 </div>
+              </div>
+              <!-- Campo de búsqueda -->
+              <div v-show="searchProductividad" class="mt-2">
+                <input type="text" class="form-control" placeholder="Buscar persona" v-model="productividadSearch">
               </div>
             </div>
            
@@ -136,9 +121,9 @@
         </div>
       </div>
 
-    <!-- ----------------------------------------------------------- -->
+    <!--------------------------------------------------------------->
                         <!-- DESEMPEÑO -->
-    <!-- ----------------------------------------------------------- -->
+    <!--------------------------------------------------------------->
       <div class="col-12 col-md-6 col-lg-4">
         <div class="card rounded-4">
           <div class="card-body">
@@ -148,11 +133,17 @@
                   <h5 class="card-title">Desempeño</h5>
                 </div>
                 <div>
-                  <button class="btn btn-outline-dark border-0"><i class="bi bi-search"></i></button>
+                  <button class="btn btn-outline-dark border-0" @click="toggleSearch('desempeño')">
+                    <i class="bi bi-search"></i>
+                  </button>
                   <button class="btn btn-outline-dark border-0">
                     <i class="bi bi-three-dots-vertical"></i>
                   </button>
                 </div>
+              </div>          
+              <!-- Campo de búsqueda -->
+              <div v-show="searchDesempeño" class="mt-2">
+                <input type="text" class="form-control" placeholder="Buscar persona" v-model="desempeñoSearch">
               </div>
             </div>
             
@@ -164,46 +155,44 @@
 </template>
 
 <script>
-import flatpickr from 'flatpickr';
-import { Spanish } from "flatpickr/dist/l10n/es.js";
 import 'flatpickr/dist/flatpickr.min.css';
 import { Chart, PieController, ArcElement, Tooltip, Legend } from 'chart.js';
 import axios from 'axios';
+import { ref } from 'vue'
 Chart.register(PieController, ArcElement, Tooltip, Legend);
 
+const showSearch = ref(false)
+
 export default {
+  
   data() {
     return {
       tareasCompletadas: 0,
       tareasEnProceso: 0,
-      totalActividades: 0
-
+      totalActividades: 0,
+      searchHoras: false,
+      searchDesempeño: false,
+      searchProductividad: false,
+      desempeñoSearch: '',
+      productividadSearch: '',
+      horasSearch: ''
     }
   },
   mounted() {
-    new Chart(this.$refs.progresChart, {
-      type: 'doughnut',
-      data: {
-        labels: ['Terminadas', 'En Proceso', 'Pendientes'],
-        datasets: [{
-          data: [400, 30, 100],
-          backgroundColor: ['#6ee7b7', '#60a5fa', '#d1d5db'],
-          borderWidth: 1,
-        }],
-      }
-    }),
-    flatpickr(this.$refs.datePicker, {
-      locale: Spanish,
-      mode: "range",
-      dateFormat: "d-m-Y",
-      minDate: "today",
-      showMonths: 1,
-      static: true,
-    });
-
     this.cargarEstadisticas()
   },
   methods: {
+    toggleSearch(section){
+      if (section === 'horas'){
+        this.searchHoras = !this.searchHoras
+      }
+      if (section === 'desempeño') {
+        this.searchDesempeño = !this.searchDesempeño
+      }
+      if (section === 'productividad') {
+        this.searchProductividad = !this.searchProductividad
+      }
+    },
     async cargarEstadisticas() {
       try {
         const res = await axios.get('http://localhost:4000/api/dashboard/estadisticas')
@@ -223,6 +212,7 @@ export default {
       }
     }
   }
+  
 }
 </script>
 
