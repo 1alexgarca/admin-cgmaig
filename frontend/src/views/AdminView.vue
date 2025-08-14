@@ -84,13 +84,44 @@
     <!-- ----------------------------------------------------------- -->
                         <!-- HORAS Y ASISTENCIAS -->
     <!-- ----------------------------------------------------------- -->
+<div class="col-12 col-md-6 col-lg-4">
+  <div class="card rounded-4">
+    <div class="card-body">
+      <!-- Header con título y botones -->
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="title">
+          <h5 class="card-title mb-0">Horas y asistencia</h5>
+        </div>
+        <div>
+          <button class="btn btn-outline-dark border-0 me-1"><i class="bi bi-search"></i></button>
+          <button class="btn btn-outline-dark border-0"><i class="bi bi-three-dots-vertical"></i></button>
+        </div>
+      </div>
+
+      <!-- Barra de búsqueda -->
+      <div class="mb-3">
+        <input type="text" class="form-control" placeholder="Buscar usuario...">
+      </div>
+
+      <!-- Información de horas -->
+      <h6>
+        <span class="badge text-bg-secondary">10</span> Hrs trabajadas
+      </h6>
+    </div>
+  </div>
+</div>
+
+
+    <!-- ----------------------------------------------------------- -->
+                        <!-- PRODUCTIVIDAD Y AVANCE  -->
+    <!-- ----------------------------------------------------------- -->
       <div class="col-12 col-md-6 col-lg-4">
         <div class="card rounded-4">
           <div class="card-body">
             <div>
               <div class="d-flex justify-content-between">
                 <div class="title">
-                  <h5 class="card-title">Horas y asistencia</h5>
+                  <h5 class="card-title">Productividad y avance</h5>
                 </div>
                 <div>
                   <button class="btn btn-outline-dark border-0"><i class="bi bi-search"></i></button>
@@ -99,26 +130,9 @@
                   </button>
                 </div>
               </div>
-              <h6><span class="badge text-bg-secondary">10</span> Hrs trabajadas</h6>
             </div>
-            <p class="card-text">This is a wider card with supporting text below as a natural lead-in to additional content. This content is a little bit longer.</p>
-            <p class="card-text"><small class="text-body-secondary">Last updated 3 mins ago</small></p>
+           
           </div>
-          <img src="..." class="card-img-bottom" alt="...">
-        </div>
-      </div>
-
-    <!-- ----------------------------------------------------------- -->
-                        <!-- PRODUCTIVIDAD Y AVANCE  -->
-    <!-- ----------------------------------------------------------- -->
-      <div class="col-12 col-md-6 col-lg-4">
-        <div class="card rounded-4">
-          <div class="card-body">
-            <h5 class="card-title">Productividad y avance</h5>
-            <p class="card-text">This is a wider card with supporting text below as a natural lead-in to additional content. This content is a little bit longer.</p>
-            <p class="card-text"><small class="text-body-secondary">Last updated 3 mins ago</small></p>
-          </div>
-          <img src="..." class="card-img-bottom" alt="...">
         </div>
       </div>
 
@@ -128,11 +142,21 @@
       <div class="col-12 col-md-6 col-lg-4">
         <div class="card rounded-4">
           <div class="card-body">
-            <h5 class="card-title">Desempeño</h5>
-            <p class="card-text">This is a wider card with supporting text below as a natural lead-in to additional content. This content is a little bit longer.</p>
-            <p class="card-text"><small class="text-body-secondary">Last updated 3 mins ago</small></p>
+            <div>
+              <div class="d-flex justify-content-between">
+                <div class="title">
+                  <h5 class="card-title">Desempeño</h5>
+                </div>
+                <div>
+                  <button class="btn btn-outline-dark border-0"><i class="bi bi-search"></i></button>
+                  <button class="btn btn-outline-dark border-0">
+                    <i class="bi bi-three-dots-vertical"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
           </div>
-          <img src="..." class="card-img-bottom" alt="...">
         </div>
       </div>
     </div>

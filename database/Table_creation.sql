@@ -1,4 +1,4 @@
-CREATE TABLE usuarios (
+actividadesCREATE TABLE usuarios (
 	id_user INT AUTO_INCREMENT PRIMARY KEY,
     nombre varchar(50) Not null,
     materno VARCHAR(50) NOT NULL,
