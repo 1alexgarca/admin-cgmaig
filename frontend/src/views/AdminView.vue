@@ -62,7 +62,7 @@
             <!-- Encabezado con título y botones -->
             <div class="d-flex justify-content-between align-items-center">
               <div class="title">
-                <h5 class="card-title">Horas y asistencia</h5>
+                <h5 class="card-title">Horas semanales</h5>
               </div>
               <div>
                 <!-- Botón de búsqueda de usuarios -->
@@ -71,11 +71,17 @@
                 </button>
                 <!-- Dropdown para mostrar datos del equipo -->
                 <div class="dropdown d-inline">
-                  <button class="btn btn-outline-dark border-0" type="button" id="teamDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                  <button class="btn btn-outline-dark border-0" type="button" @click="toggleTeamData">
                     <i class="bi bi-three-dots-vertical"></i>
                   </button>
-                  <ul class="dropdown-menu" aria-labelledby="teamDropdown">
-                    <li><a class="dropdown-item" href="#" @click.prevent="toggleTeamData">Datos de todo el equipo</a></li>
+
+                  <!-- Vue controla si se muestra -->
+                  <ul class="dropdown-menu" v-show="showTeamData">
+                    <li>
+                      <a class="dropdown-item" href="#" @click.prevent="loadTeamData">
+                        Datos de todo el equipo
+                      </a>
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -84,9 +90,11 @@
             <!-- Campo de búsqueda -->
             <div v-show="searchHoras || searchTerm" class="mt-2">
               <input type="text" class="form-control" placeholder="Buscar usuario por nombre o apellido" v-model="searchTerm">
-              <div v-if="searchTerm && filteredUsers.length" class="list-group mt-1 shadow">
+              <div v-if="searchTerm && filteredUsers.length" class="list-group shadow" style=" position: absolute; cursor: pointer; z-index: 1100; width: 90%;">
                 <div v-for="user in filteredUsers" :key="user.id_user" class="list-group-item list-group-item-action" @click="selectUser(user)">
-                  {{ user.nombre }} {{ user.paterno }} {{ user.materno }}
+                  <small>
+                    {{ user.nombre }} {{ user.paterno }} {{ user.materno }}
+                  </small>
                 </div>
               </div>
               <div v-if="searchTerm && !filteredUsers.length" class="alert alert-info mt-1">
@@ -95,17 +103,22 @@
             </div>
 
             <!-- Información del usuario seleccionado -->
-            <h6 class="mt-3">
-              <span class="badge text-bg-secondary">
-                {{ horasDiarias.reduce((acc, d) => acc + d.horas, 0) }}
-              </span>
-              Hrs trabajadas
-            </h6>
-            <div class="mb-3">
-              <small>Nombre del usuario</small> : 
-              <small>{{ selectedUser ? `${selectedUser.nombre} ${selectedUser.paterno} ${selectedUser.materno}` : storedUser.fullName }}</small>
+            <div class="mb-2 mt-3">
+              <small class="fw-bold">Nombre</small> : 
+              <small class="fst-italic">{{ selectedUser ? `${selectedUser.nombre} ${selectedUser.paterno} ${selectedUser.materno}` : storedUser.fullName }}</small>
             </div>
           </div>
+          <h6 class="mt-1">
+            <span 
+              class="badge"
+              :class="{ 'text-bg-secondary': !(esViernes && totalHoras < 32),
+                        'text-bg-danger': esViernes && totalHoras < 32
+              }"  
+            >
+              {{ horasDiarias.reduce((acc, d) => acc + parseFloat(d.horas || 0), 0) }}
+            </span>
+            Hrs trabajadas
+          </h6>
 
           <!-- Carrusel con gráficos -->
           <div id="carouselExample" class="carousel slide">
@@ -139,21 +152,23 @@
 
             <!-- Controles del carrusel -->
             <button class="carousel-control-prev" type="button" data-bs-target="#carouselExample" data-bs-slide="prev">
-              <span class="carousel-control-prev-icon text-black" aria-hidden="true"></span>
+              <span class="carousel-control-prev-icon" aria-hidden="true"></span>
               <span class="visually-hidden">Previous</span>
             </button>
             <button class="carousel-control-next" type="button" data-bs-target="#carouselExample" data-bs-slide="next">
-              <span class="carousel-control-next-icon text-black" aria-hidden="true"></span>
+              <span class="carousel-control-next-icon" aria-hidden="true"></span>
               <span class="visually-hidden">Next</span>
             </button>
           </div>
 
+          <div class="alert alert-danger p-1 text-center mt-2" v-if="esViernes && totalHoras < 32">
+            <small class="fst-italic">{{ selectedUser ? `${selectedUser.nombre} ${selectedUser.paterno} ${selectedUser.materno}` : storedUser.fullName }}</small>
+            <small> no cumplira con las <span class="fw-bold">40 horas </span>esta semana</small>
+            <!-- no cumplira con las 40 horas esta semana. -->
+          </div>
         </div>
       </div>
     </div>
-
-
-
 
     <!--------------------------------------------------------------->
                         <!-- PRODUCTIVIDAD Y AVANCE  -->
@@ -170,9 +185,9 @@
                   <button class="btn btn-outline-dark border-0" @click="toggleSearch('productividad')">
                     <i class="bi bi-search"></i>
                   </button>
-                  <button class="btn btn-outline-dark border-0">
+                  <!-- <button class="btn btn-outline-dark border-0">
                     <i class="bi bi-three-dots-vertical"></i>
-                  </button>
+                  </button> -->
                 </div>
               </div>
               <!-- Campo de búsqueda -->
@@ -180,7 +195,10 @@
                 <input type="text" class="form-control" placeholder="Buscar persona" v-model="productividadSearch">
               </div>
             </div>
-           
+            <div class="mb-2 mt-3">
+              <small class="fw-bold">Nombre</small> : 
+              <small class="fst-italic">{{ storedUser.fullName }}</small>
+            </div>
           </div>
         </div>
       </div>
@@ -223,6 +241,9 @@ import 'flatpickr/dist/flatpickr.min.css';
 import axios from 'axios';
 import { ref, computed } from 'vue';
 import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, LineElement, PointElement, BarController, LineController } from 'chart.js';
+import dayjs from 'dayjs'
+import 'dayjs/locale/es'
+
 
 ChartJS.register(
   Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, LineElement, PointElement,
@@ -273,12 +294,21 @@ export default {
                user.materno.toLowerCase().includes(search) ||
                user.paterno.toLowerCase().includes(search);
       });
+    },
+    totalHoras() {
+      return this.horasDiarias.reduce((acc, d) => acc + parseFloat(d.horas || 0), 0)
+    },
+    esViernes() {
+      return dayjs().day() === 5
     }
   },
   mounted() {
     this.cargarEstadisticas();
     this.loadUsers();
-    this.loadData(userId); // Datos iniciales del usuario/admin logueado
+    this.loadData(userId);
+    if (user) {
+      this.storedUser.fullName = `${user.name} ${user.paterno} ${user.materno}`;
+    }
   },
   methods: {
     toggleSearch(section){
@@ -286,7 +316,7 @@ export default {
       if (section === 'desempeño') this.searchDesempeño = !this.searchDesempeño;
       if (section === 'productividad') this.searchProductividad = !this.searchProductividad;
     },
-
+    
     async cargarEstadisticas() {
       try {
         const res = await axios.get('http://localhost:4000/api/dashboard/estadisticas');
@@ -307,7 +337,7 @@ export default {
         console.error('Error al cargar usuarios:', error);
       }
     },
-
+    
     async loadData(uId) {
       try {
         const horasDiaRes = await axios.get(`http://localhost:4000/api/horas-diarias/${uId}`);
@@ -322,6 +352,9 @@ export default {
       }
     },
 
+    toggleTeamData() {
+      this.showTeamData = !this.showTeamData;
+    },
     async loadTeamData() {
       try {
         const teamDiaRes = await axios.get(`http://localhost:4000/api/horas-diarias-equipo/${userId}`);
@@ -342,13 +375,6 @@ export default {
       this.loadData(user.id_user);
     },
 
-    async toggleTeamData() {
-      this.showTeamData = !this.showTeamData;
-      if (this.showTeamData) {
-        await this.loadTeamData();
-      }
-    },
-
     renderCharts() {
       if (this.horasDiariasChart) this.horasDiariasChart.destroy();
       if (this.horasSemanalesChart) this.horasSemanalesChart.destroy();
@@ -357,7 +383,7 @@ export default {
       this.horasDiariasChart = new ChartJS(ctxDia, {
         type: 'bar',
         data: {
-          labels: this.horasDiarias.map(d => d.dia),
+          labels: this.horasDiarias.map(d => this.fechaNew(d.dia)),
           datasets: [{
             label: 'Horas Diarias',
             data: this.horasDiarias.map(d => d.horas),
@@ -415,6 +441,10 @@ export default {
         },
         options: { scales: { y: { beginAtZero: true } } }
       });
+    },
+    fechaNew(fecha) {
+      const formDate = dayjs(fecha).locale('es').format('MMM DD');
+      return formDate.charAt(0).toUpperCase() + formDate.slice(1);
     }
   }
 }

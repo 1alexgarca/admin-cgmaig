@@ -6,19 +6,50 @@
             <span class="text-body-tertiary mb-3">{{ actividad.name_proyect }}</span>
         </div>
 
-        <div class="mb-4">                        
-            <div class="progress" role="progressbar">
-                <div class="progress-bar text-bg-info progress-bar-striped" :style="{ width: actividad.avance + '%' }">{{ actividad.avance }} %</div>
+        <div class="mb-3">
+            <div class="position-relative m-4">
+                <!-- Barra -->
+                <div class="progress" role="progressbar"
+                    style="height: 3px; background-color: rgb(188, 149, 92);">
+                    <div class="progress-bar" :style="{ width: maxAvance + '%', background: 'rgb(105, 28, 32)' }"></div>
+                </div>
+
+                <!-- Botones de hitos -->
+                <template v-for="(actividad, index) in registrosAvance" :key="index">
+                    <button
+                        type="button"
+                        class="position-absolute top-0 translate-middle btn btn-sm rounded-pill text-white"
+                        style="background-color: rgb(105, 28, 32);"
+                        :style="{
+                            left: actividad.avance + '%',
+                            width: '3rem',
+                            height: '2rem',
+                        }"
+                    >
+                    {{ actividad.avance }}
+                    </button>
+                </template>
             </div>
         </div>
 
-        <div class="d-flex justify-content-center">
-            <ul class="nav nav-pills bg-body-secondary bg-gradient rounded-4" id="pills-tab" role="tablist" style="padding: 3px;">
+        <div class="d-flex justify-content-center pt-3">
+            <ul class="nav nav-pills gobTertiary rounded-pill" id="pills-tab" role="tablist" style="padding: 3px;">
                 <li class="nav-item" role="presentation"> 
-                    <button class="nav-link active rounded-4" id="pills-general-tab" data-bs-toggle="pill" data-bs-target="#pills-general" type="button" role="tab" aria-controls="pills-general" aria-selected="true">Datos generales</button>
+                    <button 
+                        class="nav-link active rounded-pill" id="pills-general-tab" 
+                        data-bs-toggle="pill" data-bs-target="#pills-general" type="button" 
+                        role="tab" aria-controls="pills-general" aria-selected="true"
+                    >
+                        <i class="bi bi-file-earmark-text-fill"></i>
+                    </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link rounded-4" id="pills-editables-tab" data-bs-toggle="pill" data-bs-target="#pills-editables" type="button" role="tab" aria-controls="pills-editables" aria-selected="false">Editar datos</button>
+                    <button class="nav-link rounded-pill" id="pills-editables-tab" 
+                        data-bs-toggle="pill" data-bs-target="#pills-editables" type="button" 
+                        role="tab" aria-controls="pills-editables" aria-selected="false"
+                    >
+                        <i class="bi bi-pencil-fill"></i>
+                    </button>
                 </li>
             </ul>
         </div>
@@ -75,7 +106,7 @@
                         <label for="floatingTextarea2Disabled">Descripción</label>
                     </div>
         
-                    <div>
+                    <!-- <div>
                         <h5 class="text-center fw-bold">Tabla de actualizaciones</h5>
                         <table class="table">
                             <thead>
@@ -93,7 +124,7 @@
                                 </tr>
                             </tbody>
                         </table>
-                    </div>
+                    </div> -->
                 </div>
             </div>
 
@@ -191,15 +222,24 @@ export default {
                 horas: '',
                 avance: '',
                 project: ''
-            }
+            },
+            registrosAvance: []
         }
     },
     mounted() {
-
         const modalElement = this.$refs.horasModal
         if (modalElement) {
             this.modalInstance = new bootstrap.Modal(modalElement)
         }
+    },
+    computed: {
+        maxAvance() {
+            return Math.max(...this.registrosAvance.map(r => r.avance), 0)
+        }
+    },
+    async mounted() {
+        const res = await axios.get(`http://localhost:4000/api/registros-avances/${this.actividad.id_activities}`)
+        this.registrosAvance = res.data
     },
     methods: {
     async handleSubmit() {
@@ -228,19 +268,16 @@ export default {
         }))
         }
     },
-
     cancelarHorasExtra() {
         this.pendienteGuardar = null
         this.modalInstance?.hide()
     },
-
     async confirmarGuardarActividad() {
         if (!this.pendienteGuardar) return
         await this.enviarActualizacion(this.pendienteGuardar.id)
         this.modalInstance.hide()
         this.pendienteGuardar = null
     },
-
     async enviarActualizacion(idActividad) {
         try {
         const { actividad, descripcion, horas, avance } = this.form
@@ -306,5 +343,13 @@ export default {
 <style scoped>
 .persoData {
   margin-right: .6rem;
+}
+
+.nav-link {
+  color: #691c20;
+}
+.nav-link.active {
+  background-color: #691c20;
+  color: white;
 }
 </style>

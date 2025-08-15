@@ -804,6 +804,24 @@ app.get('/api/estadisticas/:idUser', async (req, res) => {
   }
 })
 
+// Consulta para el progreso de actividades el avance de las actividades
+app.get('/api/registros-avances/:idActividad', async (req, res) => {
+  const { idActividad } = req.params
+  try {
+    const [rows] = await pool.query(`
+      SELECT avance, fecha_actualizacion
+      FROM registro_actividad
+      WHERE id_actividad = ?
+      ORDER BY fecha_actualizacion DESC
+    `, [idActividad])
+    
+    res.json(rows)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ message: 'Error al obtener los registros de avance' })
+  }
+})
+
 // Función para generar reporte
 async function generarReporteQuincenalPDF(usuarioId) {
   try {
