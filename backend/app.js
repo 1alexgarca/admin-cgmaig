@@ -268,6 +268,90 @@ app.get('/api/dashboard/estadisticas', async (req, res) => {
   }
 })
 
+// Consulta para datos y estadisticas por HORAS Y ASISTENCIAS
+app.get('/api/usuarios/trabajadores/:adminId', async (req, res) => {
+  const { adminId } = req.params;
+  try {
+    const [rows] = await pool.query(`
+      SELECT * FROM usuarios 
+      WHERE usuario_creador = ? AND rol = 'trabajador'
+    `, [adminId]);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al cargar usuarios' });
+  }
+});
+
+app.get('/api/horas-diarias/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const [rows] = await pool.query(`
+      SELECT DATE(r.fecha_actualizacion) AS dia, SUM(r.horas_trabajadas) AS horas
+      FROM registro_actividad r
+      JOIN actividades a ON r.id_actividad = a.id_activities
+      WHERE a.usuario_asignado = ?
+      GROUP BY dia
+      ORDER BY dia DESC
+    `, [userId]);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al cargar horas diarias' });
+  }
+});
+
+app.get('/api/horas-semanales/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const [rows] = await pool.query(`
+      SELECT WEEK(r.fecha_actualizacion) AS semana, SUM(r.horas_trabajadas) AS horas
+      FROM registro_actividad r
+      JOIN actividades a ON r.id_actividad = a.id_activities
+      WHERE a.usuario_asignado = ?
+      GROUP BY semana
+      ORDER BY semana DESC
+    `, [userId]);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al cargar horas semanales' });
+  }
+});
+
+app.get('/api/horas-diarias-equipo/:adminId', async (req, res) => {
+  const { adminId } = req.params;
+  try {
+    const [rows] = await pool.query(`
+      SELECT DATE(r.fecha_actualizacion) AS dia, SUM(r.horas_trabajadas) AS horas
+      FROM registro_actividad r
+      JOIN actividades a ON r.id_actividad = a.id_activities
+      JOIN usuarios u ON a.usuario_asignado = u.id_user
+      WHERE u.usuario_creador = ?
+      GROUP BY dia
+      ORDER BY dia DESC
+    `, [adminId]);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al cargar horas diarias del equipo' });
+  }
+});
+
+app.get('/api/horas-semanales-equipo/:adminId', async (req, res) => {
+  const { adminId } = req.params;
+  try {
+    const [rows] = await pool.query(`
+      SELECT WEEK(r.fecha_actualizacion) AS semana, SUM(r.horas_trabajadas) AS horas
+      FROM registro_actividad r
+      JOIN actividades a ON r.id_actividad = a.id_activities
+      JOIN usuarios u ON a.usuario_asignado = u.id_user
+      WHERE u.usuario_creador = ?
+      GROUP BY semana
+      ORDER BY semana DESC
+    `, [adminId]);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al cargar horas semanales del equipo' });
+  }
+});
+
 
 
 // ------------------------- GESTIÓN DE USUARIOS ----------------------------- //
@@ -932,7 +1016,7 @@ async function cargarUsuarios() {
 }
 
 function configuracionGenerarReportes() {
-  cron.schedule('* * * * *', async () => {
+  cron.schedule('59 23 * * *', async () => {
     try {
       const hoy = new Date();
       const dia = hoy.getDate();
@@ -1029,6 +1113,7 @@ app.get('/api/reportes-generados/:id/descargar', async (req, res) => {
     res.status(500).json({ message: 'Error al descargar el reporte' })
   }
 })
+
 
 // -------------------------- PERFIL DEL ADMIN ---------------------------- //
 
