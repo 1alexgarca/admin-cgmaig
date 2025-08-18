@@ -52,186 +52,186 @@
     
     <div class="row g-3">
 
-    <!--------------------------------------------------------------->
-                        <!-- HORAS Y ASISTENCIAS -->
-    <!--------------------------------------------------------------->
-    <div class="col-12 col-md-6 col-lg-4">
-      <div class="card rounded-4 shadow-sm">
-        <div class="card-body">
-          <div>
-            <!-- Encabezado con título y botones -->
-            <div class="d-flex justify-content-between align-items-center">
-              <div class="title">
-                <h5 class="card-title">Horas semanales</h5>
-              </div>
-              <div>
-                <!-- Botón de búsqueda de usuarios -->
-                <button class="btn btn-outline-dark border-0 me-2" @click="toggleSearch('horas')">
-                  <i class="bi bi-search"></i>
-                </button>
-                <!-- Dropdown para mostrar datos del equipo -->
-                <div class="dropdown d-inline">
-                  <button class="btn btn-outline-dark border-0" type="button" @click="toggleTeamData">
-                    <i class="bi bi-three-dots-vertical"></i>
+      <!--------------------------------------------------------------->
+                          <!-- HORAS Y ASISTENCIAS -->
+      <!--------------------------------------------------------------->
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="card rounded-4 shadow-sm">
+          <div class="card-body">
+            <div>
+              <!-- Encabezado con título y botones -->
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="title">
+                  <h5 class="card-title">Horas semanales</h5>
+                </div>
+                <div>
+                  <!-- Botón de búsqueda de usuarios -->
+                  <button class="btn btn-outline-dark border-0 me-2" @click="toggleSearch('horas')">
+                    <i class="bi bi-search"></i>
                   </button>
+                  <!-- Dropdown para mostrar datos del equipo -->
+                  <div class="dropdown d-inline">
+                    <button class="btn btn-outline-dark border-0" type="button" @click="toggleTeamData">
+                      <i class="bi bi-three-dots-vertical"></i>
+                    </button>
 
-                  <!-- Vue controla si se muestra -->
-                  <ul class="dropdown-menu" v-show="showTeamData">
-                    <li>
-                      <a class="dropdown-item" href="#" @click.prevent="loadTeamData">
-                        Datos de todo el equipo
-                      </a>
-                    </li>
-                  </ul>
+                    <!-- Vue controla si se muestra -->
+                    <ul class="dropdown-menu" v-show="showTeamData">
+                      <li>
+                        <a class="dropdown-item" href="#" @click.prevent="loadTeamData">
+                          Datos de todo el equipo
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Campo de búsqueda -->
-            <div v-show="searchHoras || searchTerm" class="mt-2">
-              <input type="text" class="form-control" placeholder="Buscar usuario por nombre o apellido" v-model="searchTerm">
-              <div v-if="searchTerm && filteredUsers.length" class="list-group shadow" style=" position: absolute; cursor: pointer; z-index: 1100; width: 90%;">
-                <div v-for="user in filteredUsers" :key="user.id_user" class="list-group-item list-group-item-action" @click="selectUser(user)">
-                  <small>
-                    {{ user.nombre }} {{ user.paterno }} {{ user.materno }}
-                  </small>
+              <!-- Campo de búsqueda -->
+              <div v-show="searchHoras || searchTerm" class="mt-2">
+                <input type="text" class="form-control" placeholder="Buscar usuario por nombre o apellido" v-model="searchTerm">
+                <div v-if="searchTerm && filteredUsers.length" class="list-group shadow" style=" position: absolute; cursor: pointer; z-index: 1100; width: 90%;">
+                  <div v-for="user in filteredUsers" :key="user.id_user" class="list-group-item list-group-item-action" @click="selectUser(user)">
+                    <small>
+                      {{ user.nombre }} {{ user.paterno }} {{ user.materno }}
+                    </small>
+                  </div>
+                </div>
+                <div v-if="searchTerm && !filteredUsers.length" class="alert alert-info mt-1">
+                  No se encontraron usuarios.
                 </div>
               </div>
-              <div v-if="searchTerm && !filteredUsers.length" class="alert alert-info mt-1">
-                No se encontraron usuarios.
+
+              <!-- Información del usuario seleccionado -->
+              <div class="mb-2 mt-3">
+                <small class="fw-bold">Nombre</small> : 
+                <small class="fst-italic">{{ selectedUser ? `${selectedUser.nombre} ${selectedUser.paterno} ${selectedUser.materno}` : storedUser.fullName }}</small>
               </div>
             </div>
+            <h6 class="mt-1">
+              <span 
+                class="badge"
+                :class="{ 'text-bg-secondary': !(esViernes && totalHoras < 32),
+                          'text-bg-danger': esViernes && totalHoras < 32
+                }"  
+              >
+                {{ horasDiarias.reduce((acc, d) => acc + parseFloat(d.horas || 0), 0) }}
+              </span>
+              Hrs trabajadas
+            </h6>
 
-            <!-- Información del usuario seleccionado -->
-            <div class="mb-2 mt-3">
-              <small class="fw-bold">Nombre</small> : 
+            <!-- Carrusel con gráficos -->
+            <div id="carouselExample" class="carousel slide">
+              <div class="carousel-inner">
+
+                <!-- Horas Diarias -->
+                <div class="carousel-item active">
+                  <h5 class="fw-bold">Horas Diarias</h5>
+                  <canvas id="horasDiariasChart"></canvas>
+                </div>
+
+                <!-- Horas Semanales -->
+                <div class="carousel-item">
+                  <h5 class="fw-bold">Horas Semanales</h5>
+                  <canvas id="horasSemanalesChart"></canvas>
+                </div>
+
+                <!-- Horas Diarias del Equipo -->
+                <div class="carousel-item" v-if="showTeamData">
+                  <h5 class="fw-bold">Horas Diarias del Equipo</h5>
+                  <canvas id="teamHorasDiariasChart"></canvas>
+                </div>
+
+                <!-- Horas Semanales del Equipo -->
+                <div class="carousel-item" v-if="showTeamData">
+                  <h5 class="fw-bold">Horas Semanales del Equipo</h5>
+                  <canvas id="teamHorasSemanalesChart"></canvas>
+                </div>
+
+              </div>
+
+              <!-- Controles del carrusel -->
+              <button class="carousel-control-prev" type="button" data-bs-target="#carouselExample" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+              </button>
+              <button class="carousel-control-next" type="button" data-bs-target="#carouselExample" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+              </button>
+            </div>
+
+            <div class="alert alert-danger p-1 text-center mt-2" v-if="esViernes && totalHoras < 32">
               <small class="fst-italic">{{ selectedUser ? `${selectedUser.nombre} ${selectedUser.paterno} ${selectedUser.materno}` : storedUser.fullName }}</small>
-            </div>
-          </div>
-          <h6 class="mt-1">
-            <span 
-              class="badge"
-              :class="{ 'text-bg-secondary': !(esViernes && totalHoras < 32),
-                        'text-bg-danger': esViernes && totalHoras < 32
-              }"  
-            >
-              {{ horasDiarias.reduce((acc, d) => acc + parseFloat(d.horas || 0), 0) }}
-            </span>
-            Hrs trabajadas
-          </h6>
-
-          <!-- Carrusel con gráficos -->
-          <div id="carouselExample" class="carousel slide">
-            <div class="carousel-inner">
-
-              <!-- Horas Diarias -->
-              <div class="carousel-item active">
-                <h5 class="fw-bold">Horas Diarias</h5>
-                <canvas id="horasDiariasChart"></canvas>
-              </div>
-
-              <!-- Horas Semanales -->
-              <div class="carousel-item">
-                <h5 class="fw-bold">Horas Semanales</h5>
-                <canvas id="horasSemanalesChart"></canvas>
-              </div>
-
-              <!-- Horas Diarias del Equipo -->
-              <div class="carousel-item" v-if="showTeamData">
-                <h5 class="fw-bold">Horas Diarias del Equipo</h5>
-                <canvas id="teamHorasDiariasChart"></canvas>
-              </div>
-
-              <!-- Horas Semanales del Equipo -->
-              <div class="carousel-item" v-if="showTeamData">
-                <h5 class="fw-bold">Horas Semanales del Equipo</h5>
-                <canvas id="teamHorasSemanalesChart"></canvas>
-              </div>
-
-            </div>
-
-            <!-- Controles del carrusel -->
-            <button class="carousel-control-prev" type="button" data-bs-target="#carouselExample" data-bs-slide="prev">
-              <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-              <span class="visually-hidden">Previous</span>
-            </button>
-            <button class="carousel-control-next" type="button" data-bs-target="#carouselExample" data-bs-slide="next">
-              <span class="carousel-control-next-icon" aria-hidden="true"></span>
-              <span class="visually-hidden">Next</span>
-            </button>
-          </div>
-
-          <div class="alert alert-danger p-1 text-center mt-2" v-if="esViernes && totalHoras < 32">
-            <small class="fst-italic">{{ selectedUser ? `${selectedUser.nombre} ${selectedUser.paterno} ${selectedUser.materno}` : storedUser.fullName }}</small>
-            <small> no cumplira con las <span class="fw-bold">40 horas </span>esta semana</small>
-            <!-- no cumplira con las 40 horas esta semana. -->
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!--------------------------------------------------------------->
-                        <!-- PRODUCTIVIDAD Y AVANCE  -->
-    <!--------------------------------------------------------------->
-      <div class="col-12 col-md-6 col-lg-4">
-        <div class="card rounded-4">
-          <div class="card-body">
-            <div>
-              <div class="d-flex justify-content-between">
-                <div class="title">
-                  <h5 class="card-title">Productividad y avance</h5>
-                </div>
-                <div>
-                  <button class="btn btn-outline-dark border-0" @click="toggleSearch('productividad')">
-                    <i class="bi bi-search"></i>
-                  </button>
-                  <!-- <button class="btn btn-outline-dark border-0">
-                    <i class="bi bi-three-dots-vertical"></i>
-                  </button> -->
-                </div>
-              </div>
-              <!-- Campo de búsqueda -->
-              <div v-show="searchProductividad" class="mt-2">
-                <input type="text" class="form-control" placeholder="Buscar persona" v-model="productividadSearch">
-              </div>
-            </div>
-            <div class="mb-2 mt-3">
-              <small class="fw-bold">Nombre</small> : 
-              <small class="fst-italic">{{ storedUser.fullName }}</small>
+              <small> no cumplira con las <span class="fw-bold">40 horas </span>esta semana</small>
+              <!-- no cumplira con las 40 horas esta semana. -->
             </div>
           </div>
         </div>
       </div>
 
-    <!--------------------------------------------------------------->
-                        <!-- DESEMPEÑO -->
-    <!--------------------------------------------------------------->
-      <div class="col-12 col-md-6 col-lg-4">
-        <div class="card rounded-4">
-          <div class="card-body">
-            <div>
-              <div class="d-flex justify-content-between">
-                <div class="title">
-                  <h5 class="card-title">Desempeño</h5>
+      <!--------------------------------------------------------------->
+                          <!-- PRODUCTIVIDAD Y AVANCE  -->
+      <!--------------------------------------------------------------->
+        <div class="col-12 col-md-6 col-lg-4">
+          <div class="card rounded-4">
+            <div class="card-body">
+              <div>
+                <div class="d-flex justify-content-between">
+                  <div class="title">
+                    <h5 class="card-title">Productividad y avance</h5>
+                  </div>
+                  <div>
+                    <button class="btn btn-outline-dark border-0" @click="toggleSearch('productividad')">
+                      <i class="bi bi-search"></i>
+                    </button>
+                    <!-- <button class="btn btn-outline-dark border-0">
+                      <i class="bi bi-three-dots-vertical"></i>
+                    </button> -->
+                  </div>
                 </div>
-                <div>
-                  <button class="btn btn-outline-dark border-0" @click="toggleSearch('desempeño')">
-                    <i class="bi bi-search"></i>
-                  </button>
-                  <button class="btn btn-outline-dark border-0">
-                    <i class="bi bi-three-dots-vertical"></i>
-                  </button>
+                <!-- Campo de búsqueda -->
+                <div v-show="searchProductividad" class="mt-2">
+                  <input type="text" class="form-control" placeholder="Buscar persona" v-model="productividadSearch">
                 </div>
-              </div>          
-              <!-- Campo de búsqueda -->
-              <div v-show="searchDesempeño" class="mt-2">
-                <input type="text" class="form-control" placeholder="Buscar persona" v-model="desempeñoSearch">
+              </div>
+              <div class="mb-2 mt-3">
+                <small class="fw-bold">Nombre</small> : 
+                <small class="fst-italic">{{ storedUser.fullName }}</small>
               </div>
             </div>
-            
           </div>
         </div>
-      </div>
+
+      <!--------------------------------------------------------------->
+                          <!-- DESEMPEÑO -->
+      <!--------------------------------------------------------------->
+        <div class="col-12 col-md-6 col-lg-4">
+          <div class="card rounded-4">
+            <div class="card-body">
+              <div>
+                <div class="d-flex justify-content-between">
+                  <div class="title">
+                    <h5 class="card-title">Desempeño</h5>
+                  </div>
+                  <div>
+                    <button class="btn btn-outline-dark border-0" @click="toggleSearch('desempeño')">
+                      <i class="bi bi-search"></i>
+                    </button>
+                    <button class="btn btn-outline-dark border-0">
+                      <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                  </div>
+                </div>          
+                <!-- Campo de búsqueda -->
+                <div v-show="searchDesempeño" class="mt-2">
+                  <input type="text" class="form-control" placeholder="Buscar persona" v-model="desempeñoSearch">
+                </div>
+              </div>
+              
+            </div>
+          </div>
+        </div>
     </div>
   </div>
 </template>
@@ -459,4 +459,6 @@ export default {
 .card:hover {
   transform: translateY(-2px);
 }
-</style>a
+</style>
+
+

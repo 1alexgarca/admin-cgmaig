@@ -268,90 +268,171 @@ app.get('/api/dashboard/estadisticas', async (req, res) => {
   }
 })
 
-// Consulta para datos y estadisticas por HORAS Y ASISTENCIAS
-app.get('/api/usuarios/trabajadores/:adminId', async (req, res) => {
-  const { adminId } = req.params;
-  try {
-    const [rows] = await pool.query(`
-      SELECT * FROM usuarios 
-      WHERE usuario_creador = ? AND rol = 'trabajador'
-    `, [adminId]);
-    res.json(rows);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al cargar usuarios' });
-  }
-});
-
-app.get('/api/horas-diarias/:userId', async (req, res) => {
+// Horas y asistencias por usuario
+app.get('/api/horas/:userId', async (req, res) => {
   const { userId } = req.params;
   try {
-    const [rows] = await pool.query(`
-      SELECT DATE(r.fecha_actualizacion) AS dia, SUM(r.horas_trabajadas) AS horas
+    const [horasDiarias] = await pool.query(`
+      SELECT 
+        DATE(r.fecha_actualizacion) AS dia,
+        SUM(r.horas_trabajadas) AS horas_totales,
+        SUM(CASE WHEN r.es_hora_extra = 1 THEN r.horas_trabajadas ELSE 0 END) AS horas_extra,
+        COUNT(DISTINCT DATE(r.fecha_actualizacion)) AS dias_asistencia,
+        CASE WHEN SUM(r.horas_trabajadas) < 8 THEN 1 ELSE 0 END AS incumple_dia
       FROM registro_actividad r
       JOIN actividades a ON r.id_actividad = a.id_activities
       WHERE a.usuario_asignado = ?
       GROUP BY dia
-      ORDER BY dia DESC
+      ORDER BY dia ASC
     `, [userId]);
-    res.json(rows);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al cargar horas diarias' });
-  }
-});
 
-app.get('/api/horas-semanales/:userId', async (req, res) => {
-  const { userId } = req.params;
-  try {
-    const [rows] = await pool.query(`
-      SELECT WEEK(r.fecha_actualizacion) AS semana, SUM(r.horas_trabajadas) AS horas
+    const [horasSemanales] = await pool.query(`
+      SELECT 
+        YEAR(r.fecha_actualizacion) AS anio,
+        WEEK(r.fecha_actualizacion, 1) AS semana,
+        SUM(r.horas_trabajadas) AS horas_totales,
+        SUM(CASE WHEN r.es_hora_extra = 1 THEN r.horas_trabajadas ELSE 0 END) AS horas_extra,
+        COUNT(DISTINCT DATE(r.fecha_actualizacion)) AS dias_asistencia,
+        CASE WHEN SUM(r.horas_trabajadas) < 40 THEN 1 ELSE 0 END AS incumple_semana,
+        ROUND((SUM(r.horas_trabajadas)/40)*100,2) AS porcentaje_meta
       FROM registro_actividad r
       JOIN actividades a ON r.id_actividad = a.id_activities
       WHERE a.usuario_asignado = ?
-      GROUP BY semana
-      ORDER BY semana DESC
+      GROUP BY anio, semana
+      ORDER BY anio ASC, semana ASC
     `, [userId]);
-    res.json(rows);
+
+    res.json({ horasDiarias, horasSemanales });
   } catch (error) {
-    res.status(500).json({ error: 'Error al cargar horas semanales' });
+    res.status(500).json({ error: 'Error al cargar horas y asistencias' });
   }
 });
 
-app.get('/api/horas-diarias-equipo/:adminId', async (req, res) => {
+// Horas y asistencias por equipo
+app.get('/api/horas-equipo/:adminId', async (req, res) => {
   const { adminId } = req.params;
   try {
-    const [rows] = await pool.query(`
-      SELECT DATE(r.fecha_actualizacion) AS dia, SUM(r.horas_trabajadas) AS horas
+    const [horasDiarias] = await pool.query(`
+      SELECT 
+        DATE(r.fecha_actualizacion) AS dia,
+        SUM(r.horas_trabajadas) AS horas_totales,
+        SUM(CASE WHEN r.es_hora_extra = 1 THEN r.horas_trabajadas ELSE 0 END) AS horas_extra
       FROM registro_actividad r
       JOIN actividades a ON r.id_actividad = a.id_activities
       JOIN usuarios u ON a.usuario_asignado = u.id_user
       WHERE u.usuario_creador = ?
       GROUP BY dia
-      ORDER BY dia DESC
+      ORDER BY dia ASC
     `, [adminId]);
-    res.json(rows);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al cargar horas diarias del equipo' });
-  }
-});
 
-app.get('/api/horas-semanales-equipo/:adminId', async (req, res) => {
-  const { adminId } = req.params;
-  try {
-    const [rows] = await pool.query(`
-      SELECT WEEK(r.fecha_actualizacion) AS semana, SUM(r.horas_trabajadas) AS horas
+    const [horasSemanales] = await pool.query(`
+      SELECT 
+        YEAR(r.fecha_actualizacion) AS anio,
+        WEEK(r.fecha_actualizacion, 1) AS semana,
+        SUM(r.horas_trabajadas) AS horas_totales,
+        SUM(CASE WHEN r.es_hora_extra = 1 THEN r.horas_trabajadas ELSE 0 END) AS horas_extra,
+        ROUND((SUM(r.horas_trabajadas)/(COUNT(DISTINCT u.id_user)*40))*100,2) AS porcentaje_meta
       FROM registro_actividad r
       JOIN actividades a ON r.id_actividad = a.id_activities
       JOIN usuarios u ON a.usuario_asignado = u.id_user
       WHERE u.usuario_creador = ?
-      GROUP BY semana
-      ORDER BY semana DESC
+      GROUP BY anio, semana
+      ORDER BY anio ASC, semana ASC
     `, [adminId]);
-    res.json(rows);
+
+    res.json({ horasDiarias, horasSemanales });
   } catch (error) {
-    res.status(500).json({ error: 'Error al cargar horas semanales del equipo' });
+    res.status(500).json({ error: 'Error al cargar horas y asistencias del equipo' });
   }
 });
 
+// Productividad y avance por usuario
+app.get('/api/productividad/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const [data] = await pool.query(`
+      SELECT 
+        COUNT(a.id_activities) AS total_tareas,
+        SUM(CASE WHEN a.avance=100 THEN 1 ELSE 0 END) AS tareas_completadas,
+        ROUND(AVG(a.avance),2) AS promedio_avance,
+        SUM(a.horas_trabajadas) AS horas_invertidas,
+        ROUND((SUM(a.horas_trabajadas)/40)*100,2) AS porcentaje_horas
+      FROM actividades a
+      WHERE a.usuario_asignado = ?
+    `, [userId]);
+
+    res.json(data[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al cargar productividad' });
+  }
+});
+
+// Productividad y avance por equipo
+app.get('/api/productividad-equipo/:adminId', async (req, res) => {
+  const { adminId } = req.params;
+  try {
+    const [data] = await pool.query(`
+      SELECT 
+        COUNT(a.id_activities) AS total_tareas,
+        SUM(CASE WHEN a.avance=100 THEN 1 ELSE 0 END) AS tareas_completadas,
+        ROUND(AVG(a.avance),2) AS promedio_avance,
+        SUM(a.horas_trabajadas) AS horas_invertidas
+      FROM actividades a
+      JOIN usuarios u ON a.usuario_asignado = u.id_user
+      WHERE u.usuario_creador = ?
+    `, [adminId]);
+
+    res.json(data[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al cargar productividad del equipo' });
+  }
+});
+
+// Desempeño por usuario
+app.get('/api/desempeno/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const [rows] = await pool.query(`
+      SELECT 
+        CONCAT(u.nombre,' ',u.paterno,' ',u.materno) AS nombre,
+        SUM(r.horas_trabajadas) AS horas_totales,
+        SUM(a.avance) AS avance_total,
+        ROUND(SUM(a.avance)/SUM(r.horas_trabajadas),2) AS eficiencia
+      FROM usuarios u
+      JOIN actividades a ON u.id_user = a.usuario_asignado
+      JOIN registro_actividad r ON r.id_actividad = a.id_activities
+      WHERE u.id_user = ?
+      GROUP BY u.id_user
+    `, [userId]);
+    res.json(rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al cargar desempeño' });
+  }
+});
+
+// Desempeño por equipo (ranking)
+app.get('/api/desempeno-equipo/:adminId', async (req, res) => {
+  const { adminId } = req.params;
+  try {
+    const [rows] = await pool.query(`
+      SELECT 
+        CONCAT(u.nombre,' ',u.paterno,' ',u.materno) AS nombre,
+        SUM(r.horas_trabajadas) AS horas_totales,
+        SUM(a.avance) AS avance_total,
+        ROUND(SUM(a.avance)/SUM(r.horas_trabajadas),2) AS eficiencia
+      FROM usuarios u
+      JOIN actividades a ON u.id_user = a.usuario_asignado
+      JOIN registro_actividad r ON r.id_actividad = a.id_activities
+      WHERE u.usuario_creador = ?
+      GROUP BY u.id_user
+      ORDER BY eficiencia DESC
+    `, [adminId]);
+
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al cargar desempeño del equipo' });
+  }
+});
 
 
 // ------------------------- GESTIÓN DE USUARIOS ----------------------------- //
