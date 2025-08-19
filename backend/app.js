@@ -350,18 +350,32 @@ app.get('/api/horas-equipo/:adminId', async (req, res) => {
 app.get('/api/productividad/:userId', async (req, res) => {
   const { userId } = req.params;
   try {
-    const [data] = await pool.query(`
+    const [summary] = await pool.query(`
       SELECT 
         COUNT(a.id_activities) AS total_tareas,
         SUM(CASE WHEN a.avance=100 THEN 1 ELSE 0 END) AS tareas_completadas,
+        COUNT(a.id_activities) - SUM(CASE WHEN a.avance=100 THEN 1 ELSE 0 END) AS tareas_pendientes,
         ROUND(AVG(a.avance),2) AS promedio_avance,
-        SUM(a.horas_trabajadas) AS horas_invertidas,
-        ROUND((SUM(a.horas_trabajadas)/40)*100,2) AS porcentaje_horas
+        SUM(r.horas_trabajadas) AS horas_invertidas,
+        ROUND((SUM(r.horas_trabajadas)/40)*100,2) AS porcentaje_horas
       FROM actividades a
+      JOIN registro_actividad r ON a.id_activities = r.id_actividad
       WHERE a.usuario_asignado = ?
-    `, [userId]);
+    `, [userId])
 
-    res.json(data[0]);
+    const [weekly] = await pool.query(`
+      SELECT 
+        YEAR(r.fecha_actualizacion) AS anio,
+        WEEK(r.fecha_actualizacion, 1) AS semana,
+        ROUND(AVG(a.avance),2) AS promedio_avance
+      FROM actividades a
+      JOIN registro_actividad r ON a.id_activities = r.id_actividad
+      WHERE a.usuario_asignado = ?
+      GROUP BY anio, semana
+      ORDER BY anio ASC, semana ASC
+    `, [userId])
+
+    res.json({ ...summary[0], weekly });
   } catch (error) {
     res.status(500).json({ error: 'Error al cargar productividad' });
   }
@@ -376,8 +390,9 @@ app.get('/api/productividad-equipo/:adminId', async (req, res) => {
         COUNT(a.id_activities) AS total_tareas,
         SUM(CASE WHEN a.avance=100 THEN 1 ELSE 0 END) AS tareas_completadas,
         ROUND(AVG(a.avance),2) AS promedio_avance,
-        SUM(a.horas_trabajadas) AS horas_invertidas
+        SUM(r.horas_trabajadas) AS horas_invertidas
       FROM actividades a
+      JOIN registro_actividad r ON a.id_activities = r.id_actividad
       JOIN usuarios u ON a.usuario_asignado = u.id_user
       WHERE u.usuario_creador = ?
     `, [adminId]);
@@ -397,7 +412,7 @@ app.get('/api/desempeno/:userId', async (req, res) => {
         CONCAT(u.nombre,' ',u.paterno,' ',u.materno) AS nombre,
         SUM(r.horas_trabajadas) AS horas_totales,
         SUM(a.avance) AS avance_total,
-        ROUND(SUM(a.avance)/SUM(r.horas_trabajadas),2) AS eficiencia
+        ROUND(SUM(a.avance)/NULLIF(SUM(r.horas_trabajadas),0),2) AS eficiencia
       FROM usuarios u
       JOIN actividades a ON u.id_user = a.usuario_asignado
       JOIN registro_actividad r ON r.id_actividad = a.id_activities
