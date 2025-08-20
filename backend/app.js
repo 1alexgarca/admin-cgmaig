@@ -288,18 +288,31 @@ app.get('/api/horas/:userId', async (req, res) => {
 
     const [horasSemanales] = await pool.query(`
       SELECT 
-        YEAR(r.fecha_actualizacion) AS anio,
-        WEEK(r.fecha_actualizacion, 1) AS semana,
-        SUM(r.horas_trabajadas) AS horas_totales,
-        SUM(CASE WHEN r.es_hora_extra = 1 THEN r.horas_trabajadas ELSE 0 END) AS horas_extra,
-        COUNT(DISTINCT DATE(r.fecha_actualizacion)) AS dias_asistencia,
-        CASE WHEN SUM(r.horas_trabajadas) < 40 THEN 1 ELSE 0 END AS incumple_semana,
-        ROUND((SUM(r.horas_trabajadas)/40)*100,2) AS porcentaje_meta
+          YEAR(r.fecha_actualizacion) AS anio,
+          WEEK(r.fecha_actualizacion, 1) AS semana,
+          -- Calcular lunes de la semana
+          DATE_FORMAT(
+              DATE_SUB(r.fecha_actualizacion, INTERVAL (DAYOFWEEK(r.fecha_actualizacion) - 2) DAY),
+              '%d-%m'
+          ) AS inicio_semana,
+          -- Calcular viernes de la semana
+          DATE_FORMAT(
+              DATE_ADD(
+                  DATE_SUB(r.fecha_actualizacion, INTERVAL (DAYOFWEEK(r.fecha_actualizacion) - 2) DAY),
+                  INTERVAL 4 DAY
+              ),
+              '%d-%m'
+          ) AS fin_semana,
+          SUM(r.horas_trabajadas) AS horas_totales,
+          SUM(CASE WHEN r.es_hora_extra = 1 THEN r.horas_trabajadas ELSE 0 END) AS horas_extra,
+          COUNT(DISTINCT DATE(r.fecha_actualizacion)) AS dias_asistencia,
+          CASE WHEN SUM(r.horas_trabajadas) < 40 THEN 1 ELSE 0 END AS incumple_semana,
+          ROUND((SUM(r.horas_trabajadas) / 40) * 100, 2) AS porcentaje_meta
       FROM registro_actividad r
       JOIN actividades a ON r.id_actividad = a.id_activities
       WHERE a.usuario_asignado = ?
       GROUP BY anio, semana
-      ORDER BY anio ASC, semana ASC
+      ORDER BY anio ASC, semana ASC;
     `, [userId]);
 
     res.json({ horasDiarias, horasSemanales });

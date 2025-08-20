@@ -150,6 +150,23 @@
                   <div style="position: relative; height: 200px; width: 100%;">
                     <canvas id="horasDiariasChart" style="height: 200px; width: 100%;"></canvas>
                   </div>
+                  <div class="d-flex justify-content-around mb-3">
+                    <div class="d-flex align-items-center">
+                      <div style="height: 15px; width: 15px;" class="bg-primary rounded-2 "></div>
+                      <small class="ms-2 fst-italic">Horas cumplidas</small>
+                    </div>
+
+                    <div class="d-flex align-items-center">
+                      <div style="height: 15px; width: 15px;" class="bg-success rounded-2"></div>
+                      <small class="ms-2 fst-italic">Horas extras</small>
+                    </div>
+                  </div>
+                  <div class="d-flex justify-content-center">
+                    <div class="d-flex align-items-center">
+                      <div style="height: 15px; width: 15px;" class="bg-danger rounded-2" ></div>
+                      <small class="ms-2 fst-italic">No cumplio</small>
+                    </div>
+                  </div>
                 </div>
                 <div class="carousel-item">
                   <h6 class="fw-bold mb-2">Horas Semanales</h6>
@@ -539,7 +556,7 @@ export default {
         this.productividad = response.data;
         
         await this.$nextTick();
-        this.renderProductividadCharts(); // ✅ Este método ahora existe
+        this.renderProductividadCharts();
       } catch (error) {
         this.handleError('Error al cargar datos de productividad', error);
       }
@@ -640,13 +657,28 @@ export default {
     },
 
     // ========== UTILIDADES ==========
+    getCurrentWeekRange() {
+      const today = new Date()
+      const day = today.getDay()
+
+      const diffToMonday = day === 0 ? -6 : 1 - day
+      const monday = new Date(today)
+      monday.setHours(0, 0, 0, 0)
+      monday.setDate(today.getDate() + diffToMonday)
+
+      const friday = new Date(monday)
+      friday.setDate(monday.getDate() + 4)
+      friday.setHours(23, 59, 59, 999)
+
+      return { start: monday, end: friday }
+    },
     getCurrentUserName() {
       if (this.selectedUser) {
         return `${this.selectedUser.nombre} ${this.selectedUser.paterno} ${this.selectedUser.materno}`; // ✅ Corregido: name → nombre
       }
       
       if (this.currentUser) {
-        return `${this.currentUser.nombre || ''} ${this.currentUser.paterno || ''} ${this.currentUser.materno || ''}`.trim(); // ✅ Corregido: name → nombre
+        return `${this.currentUser.name || ''} ${this.currentUser.paterno || ''} ${this.currentUser.materno || ''}`.trim(); // ✅ Corregido: name → nombre
       }
       
       return 'Usuario no encontrado';
@@ -680,7 +712,31 @@ export default {
 
       // Gráfico Horas Diarias
       const ctxDiarias = document.getElementById('horasDiariasChart');
-      if (ctxDiarias && this.horasData.diarias && this.horasData.diarias.length > 0) {
+      const { start, end } = this.getCurrentWeekRange()
+    
+      // console.log("Datos antes del filtro:", this.horasData.diarias)
+
+      const diariasSemana = this.horasData.diarias.filter(d => {
+        if (!d.dia || typeof d.dia !== 'string') {
+          console.warn("Fecha inválida en:", d)
+          return false
+        }
+
+        // Extraer solo la parte de la fecha del formato ISO
+        const fechaStr = d.dia.split('T')[0]
+        const [year, month, day] = fechaStr.split("-").map(Number)
+        const fecha = new Date(year, month - 1, day)
+        if (isNaN(fecha.getTime())) {
+          console.warn("Fecha no válida:", d.dia)
+          return false
+        }
+        console.log("Fecha procesada:", fecha, "Rango:", start, end)
+        return fecha >= start && fecha <= end
+      })
+      // console.log("Rango semana:", start, end)
+      // console.log("Filtradas semana:", diariasSemana)
+      
+      if (ctxDiarias && diariasSemana.length > 0) {
 
         ctxDiarias.style.height = '200px'
         ctxDiarias.style.width = '100%'
@@ -688,11 +744,16 @@ export default {
         this.charts.horasDiariasChart = new ChartJS(ctxDiarias, {
           type: 'bar',
           data: {
-            labels: this.horasData.diarias.map(d => this.formatDate(d.dia)),
+            labels: diariasSemana.map(d => this.formatDate(d.dia)),
             datasets: [{
               label: 'Horas trabajadas',
-              data: this.horasData.diarias.map(d => d.horas_totales || 0), // ✅ Usar datos reales de horas
-              backgroundColor: '#20c997',
+              data: diariasSemana.map(d => d.horas_totales || 0), 
+              backgroundColor: diariasSemana.map(d => {
+                const hours = parseFloat(d.horas_totales) || 0
+                if (hours > 8) return '#28a745'
+                if (hours === 8) return '#007bff'
+                return '#dc3545'
+              }),
               borderRadius: 4
             }]
           },
@@ -730,17 +791,44 @@ export default {
       const ctxSemanales = document.getElementById('horasSemanalesChart');
       if (ctxSemanales && this.horasData.semanales && this.horasData.semanales.length > 0) {
 
+        const currentDate = new Date()
+        const currentMonth = currentDate.getMonth()
+        const currentYear = currentDate.getFullYear()
+        
+        const parseDate = (dateStr) => {
+          const [day, month] = dateStr.split('-').map(Number)
+          return new Date(currentYear, month - 1, day)
+        }
+
+        const filteredSemanales = this.horasData.semanales.filter(s => {
+          const startDate =parseDate(s.inicio_semana)
+          const endDate = parseDate(s.fin_semana)
+          return startDate.getMonth() === currentMonth || endDate.getMonth() === currentMonth
+        })
+
+        const monthNames = [ 'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+        const labels = filteredSemanales.map(s => {
+          const [startDay] = s.inicio_semana.split('-')
+          const [endDay, endMonth] = s.fin_semana.split('-')
+          return `${startDay} al ${endDay} ${monthNames[Number(endMonth) - 1]}`
+        })
+
         ctxSemanales.style.height = '200px'
         ctxSemanales.style.width = '100px'
 
         this.charts.horasSemanalesChart = new ChartJS(ctxSemanales, {
           type: 'bar',
           data: {
-            labels: this.horasData.semanales.map(s => `Sem ${s.semana}`),
+            labels: labels,
             datasets: [{
               label: 'Horas',
-              data: this.horasData.semanales.map(s => s.horas_totales || 0),
-              backgroundColor: '#0d6efd',
+              data: filteredSemanales.map(s => s.horas_totales || 0),
+              backgroundColor: filteredSemanales.map(s => {
+                const hours = parseFloat(s.horas_totales) || 0
+                if (hours > 40) return '#28a745'
+                if (hours === 40) return '#007bff'
+                return '#dc3545'
+              }),
               borderRadius: 4
             }]
           },
@@ -840,13 +928,13 @@ export default {
             datasets: [{
               data: [porcentajeHoras, Math.max(0, 100 - porcentajeHoras)],
               backgroundColor: ['#fd7e14', '#e9ecef'],
-              borderWidth: 0
+              borderWidth: 2
             }]
           },
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            cutout: '70%',
+            cutout: '50%',
             plugins: {
               legend: {
                 position: 'bottom'
