@@ -66,7 +66,7 @@
 
     <div class="row g-3">
       <!-- SECCIÓN HORAS Y ASISTENCIAS -->
-      <div class="col-12 col-lg-4" style="height: 30rem;">
+      <div class="col-12 col-lg-6" style="height: auto;">
         <div class="card rounded-4 shadow-sm h-100">
           <div class="card-body">
             <!-- Header con controles -->
@@ -76,19 +76,6 @@
                 <button class="btn btn-outline-primary btn-sm" @click="toggleSearch('horas')">
                   <i class="bi bi-search"></i>
                 </button>
-                <div class="dropdown">
-                  <button class="btn btn-outline-secondary btn-sm dropdown-toggle" 
-                    type="button" @click="toggleDropdown('horas')">
-                    <i class="bi bi-three-dots-vertical"></i>
-                  </button>
-                  <ul class="dropdown-menu" :class="{ show: dropdownVisible.horas }">
-                    <li>
-                      <a class="dropdown-item" href="#" @click.prevent="toggleTeamView('horas')">
-                        {{ showTeamHoras ? 'Ver Individual' : 'Ver Equipo' }}
-                      </a>
-                    </li>
-                  </ul>
-                </div>
               </div>
             </div>
 
@@ -99,17 +86,17 @@
                   type="text" 
                   class="form-control" 
                   placeholder="Buscar usuario..." 
-                  v-model="searchTerm"
-                  @input="filterUsers"
+                  v-model="searchTermHoras"
+                  @input="filterUsersHoras"
                 >
-                <div v-if="filteredUsers.length && searchTerm" 
+                <div v-if="filteredUserHoras.length && searchTermHoras" 
                   class="list-group position-absolute w-100 shadow-sm" 
                   style="z-index: 1050; max-height: 200px; overflow-y: auto;">
                   <button 
-                    v-for="user in filteredUsers" 
+                    v-for="user in filteredUserHoras" 
                     :key="user.id_user" 
                     class="list-group-item list-group-item-action"
-                    @click="selectUser(user)">
+                    @click="selectUserHoras(user)">
                     {{ user.nombre }} {{ user.paterno }} {{ user.materno }}
                   </button>
                 </div>
@@ -120,7 +107,7 @@
             <div class="mb-3">
               <small class="text-muted">Usuario actual:</small>
               <div class="fw-bold">
-                {{ getCurrentUserName() }}
+                {{ getCurrentUserName(selectedUserHoras || currentUser) }}
               </div>
             </div>
 
@@ -130,11 +117,16 @@
                 <span class="badge bg-primary">{{ getTotalHorasSemanales() }}</span>
                 Horas esta semana
               </h6>
-              <div v-if="shouldShowWarning()" class="alert alert-warning p-2 mt-2">
+              <div v-if="mostrarAdvertencia" class="alert alert-warning p-2 mt-2 d-flex justify-content-between">
                 <small>
                   <i class="bi bi-exclamation-triangle"></i>
                   No cumplirá con las 40 horas semanales
                 </small>
+                <i 
+                  class="bi bi-x-circle-fill" 
+                  style="cursor: pointer;"
+                  @click="cerrarAdvertencia"
+                ></i>
               </div>
             </div>
 
@@ -145,6 +137,7 @@
                 <button type="button" data-bs-target="#carouselHoras" data-bs-slide-to="1"></button>
               </div>
               <div class="carousel-inner">
+                <!-- Horas diarias -->
                 <div class="carousel-item active">
                   <h6 class="fw-bold mb-2">Horas Diarias</h6>
                   <div style="position: relative; height: 200px; width: 100%;">
@@ -168,11 +161,29 @@
                     </div>
                   </div>
                 </div>
+                <!-- HORAS SEMANALES -->
                 <div class="carousel-item">
                   <h6 class="fw-bold mb-2">Horas Semanales</h6>
                   <div style="height: 200px; width: 100%;">
                     <canvas id="horasSemanalesChart" style="height: 200; height: 100%;"></canvas>
-                  </div>                  
+                  </div>    
+                  <div class="d-flex justify-content-around mb-3">
+                    <div class="d-flex align-items-center">
+                      <div style="height: 15px; width: 15px;" class="bg-primary rounded-2 "></div>
+                      <small class="ms-2 fst-italic">Horas cumplidas</small>
+                    </div>
+
+                    <div class="d-flex align-items-center">
+                      <div style="height: 15px; width: 15px;" class="bg-success rounded-2"></div>
+                      <small class="ms-2 fst-italic">Horas extras</small>
+                    </div>
+                  </div>
+                  <div class="d-flex justify-content-center">
+                    <div class="d-flex align-items-center">
+                      <div style="height: 15px; width: 15px;" class="bg-danger rounded-2" ></div>
+                      <small class="ms-2 fst-italic">No cumplio</small>
+                    </div>
+                  </div>              
                 </div>
               </div>
               <button class="carousel-control-prev" type="button" data-bs-target="#carouselHoras" data-bs-slide="prev">
@@ -187,7 +198,7 @@
       </div>
 
       <!-- SECCIÓN PRODUCTIVIDAD -->
-      <div class="col-12 col-lg-4">
+      <div class="col-12 col-lg-6">
         <div class="card rounded-4 shadow-sm h-100">
           <div class="card-body">
             <!-- Header -->
@@ -197,19 +208,6 @@
                 <button class="btn btn-outline-primary btn-sm" @click="toggleSearch('productividad')">
                   <i class="bi bi-search"></i>
                 </button>
-                <div class="dropdown" >
-                  <button class="btn btn-outline-secondary btn-sm dropdown-toggle" 
-                    type="button" data-bs-toggle="dropdown">
-                    <i class="bi bi-three-dots-vertical"></i>
-                  </button>
-                  <ul class="dropdown-menu">
-                    <li>
-                      <a class="dropdown-item" href="#" @click.prevent="toggleTeamView('productividad')">
-                        {{ showTeamProductividad ? 'Ver Individual' : 'Ver Equipo' }}
-                      </a>
-                    </li>
-                  </ul>
-                </div>
               </div>
             </div>
 
@@ -220,17 +218,17 @@
                   type="text" 
                   class="form-control" 
                   placeholder="Buscar usuario..." 
-                  v-model="searchTerm"
-                  @input="filterUsers"
+                  v-model="searchTermProd"
+                  @input="filterUsersProd"
                 >
-                <div v-if="filteredUsers.length && searchTerm" 
+                <div v-if="filteredUserProd.length && searchTermProd" 
                   class="list-group position-absolute w-100 shadow-sm" 
                   style="z-index: 1050; max-height: 200px; overflow-y: auto;">
                   <button 
-                    v-for="user in filteredUsers" 
+                    v-for="user in filteredUserProd" 
                     :key="user.id_user" 
                     class="list-group-item list-group-item-action"
-                    @click="selectUser(user)">
+                    @click="selectUserProd(user)">
                     {{ user.nombre }} {{ user.paterno }} {{ user.materno }}
                   </button>
                 </div>
@@ -240,7 +238,7 @@
             <!-- Usuario Seleccionado -->
             <div class="mb-3">
               <small class="text-muted">Usuario actual:</small>
-              <div class="fw-bold">{{ getCurrentUserName() }}</div>
+              <div class="fw-bold">{{ getCurrentUserName(selectedUserProd || currentUser) }}</div>
             </div>
 
             <!-- Estadísticas Productividad -->
@@ -256,7 +254,7 @@
                 </div>
                 <div class="col-4">
                   <div class="fw-bold text-info">{{ productividad.promedio_avance || 0 }}%</div>
-                  <small class="text-muted">Avance</small>
+                  <small class="text-muted">Promedio Avance</small>
                 </div>
               </div>
             </div>
@@ -266,7 +264,6 @@
               <div class="carousel-indicators">
                 <button type="button" data-bs-target="#carouselProductividad" data-bs-slide-to="0" class="active"></button>
                 <button type="button" data-bs-target="#carouselProductividad" data-bs-slide-to="1"></button>
-                <button type="button" data-bs-target="#carouselProductividad" data-bs-slide-to="2"></button>
               </div>
               <div class="carousel-inner">
                 <div class="carousel-item active">
@@ -276,13 +273,7 @@
                   </div>
                 </div>
                 <div class="carousel-item">
-                  <h6 class="fw-bold mb-2">Avance Semanal</h6>
-                  <div style="height: 200px; width: 100%;">
-                    <canvas id="productividadAvanceChart" style="height: 200px; width: 100%;"></canvas>
-                  </div>
-                </div>
-                <div class="carousel-item">
-                  <h6 class="fw-bold mb-2">Meta de Horas</h6>
+                  <h6 class="fw-bold mb-2">Meta de 40 Horas Semanales</h6>
                   <div style="height: 200px; width: 100%;">
                     <canvas id="productividadMetaChart" style="height: 200px; width: 100%;"></canvas>
                   </div>
@@ -294,98 +285,6 @@
               <button class="carousel-control-next" type="button" data-bs-target="#carouselProductividad" data-bs-slide="next">
                 <span class="carousel-control-next-icon"></span>
               </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- SECCIÓN DESEMPEÑO -->
-      <div class="col-12 col-lg-4">
-        <div class="card rounded-4 shadow-sm h-100">
-          <div class="card-body">
-            <!-- Header -->
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h5 class="card-title mb-0">Desempeño</h5>
-              <div class="d-flex gap-2">
-                <button class="btn btn-outline-primary btn-sm" @click="toggleSearch('desempeno')">
-                  <i class="bi bi-search"></i>
-                </button>
-                <div class="dropdown">
-                  <button class="btn btn-outline-secondary btn-sm dropdown-toggle" 
-                    type="button" data-bs-toggle="dropdown">
-                    <i class="bi bi-three-dots-vertical"></i>
-                  </button>
-                  <ul class="dropdown-menu">
-                    <li>
-                      <a class="dropdown-item" href="#" @click.prevent="toggleTeamView('desempeno')">
-                        {{ showTeamDesempeno ? 'Ver Individual' : 'Ver Ranking' }}
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            <!-- Búsqueda -->
-            <div v-show="searchDesempeno" class="mb-3">
-              <div class="position-relative">
-                <input 
-                  type="text" 
-                  class="form-control" 
-                  placeholder="Buscar usuario..." 
-                  v-model="searchTerm"
-                  @input="filterUsers"
-                >
-                <div v-if="filteredUsers.length && searchTerm" 
-                  class="list-group position-absolute w-100 shadow-sm" 
-                  style="z-index: 1050; max-height: 200px; overflow-y: auto;">
-                  <button 
-                    v-for="user in filteredUsers" 
-                    :key="user.id_user" 
-                    class="list-group-item list-group-item-action"
-                    @click="selectUser(user)">
-                    {{ user.nombre }} {{ user.paterno }} {{ user.materno }}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Usuario/Equipo Actual -->
-            <div class="mb-3">
-              <small class="text-muted">{{ showTeamDesempeno ? 'Ranking del equipo' : 'Usuario actual' }}:</small>
-              <div class="fw-bold">
-                {{ showTeamDesempeno ? 'Todo el equipo' : getCurrentUserName() }}
-              </div>
-            </div>
-
-            <!-- Métricas de Desempeño -->
-            <div v-if="!showTeamDesempeno && desempeno.eficiencia" class="mb-3">
-              <div class="text-center">
-                <h4 class="text-primary">{{ desempeno.eficiencia || 0 }}</h4>
-                <small class="text-muted">Eficiencia (avance/hora)</small>
-              </div>
-            </div>
-
-            <!-- Vista Individual vs Ranking -->
-            <div v-if="showTeamDesempeno">
-              <!-- Ranking del Equipo -->
-              <div class="ranking-list" style="max-height: 300px; overflow-y: auto;">
-                <div v-for="(member, index) in desempenoEquipo" :key="index" 
-                  class="d-flex justify-content-between align-items-center p-2 mb-2 bg-light rounded">
-                  <div>
-                    <span class="badge bg-primary me-2">{{ index + 1 }}</span>
-                    <span class="fw-bold">{{ member.nombre }}</span>
-                  </div>
-                  <div class="text-end">
-                    <div class="fw-bold text-success">{{ member.eficiencia || 0 }}</div>
-                    <small class="text-muted">eficiencia</small>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div v-else>
-              <!-- Gráfico Individual -->
-              <canvas id="desempenoChart" height="200"></canvas>
             </div>
           </div>
         </div>
@@ -414,26 +313,25 @@ export default {
   name: 'Dashboard',
   data() {
     return {
+      mostrarAdvertencia: false,
       // Estado general
       isLoading: false,
       error: null,
       
       // Usuario
       currentUser: JSON.parse(localStorage.getItem('user') || '{}'),
-      selectedUser: null,
+      selectedUserHoras: null,
+      selectedUserProd: null,
       users: [],
       
       // Búsquedas
-      searchTerm: '',
-      filteredUsers: [],
       searchHoras: false,
       searchProductividad: false,
-      searchDesempeno: false,
       
-      // Vistas de equipo
-      showTeamHoras: false,
-      showTeamProductividad: false,
-      showTeamDesempeno: false,
+      searchTermHoras: '',
+      filteredUserHoras: [],
+      searchTermProd: '',
+      filteredUserProd: [],
       
       // Datos
       estadisticas: {},
@@ -442,17 +340,9 @@ export default {
         semanales: []
       },
       productividad: {},
-      desempeno: {},
-      desempenoEquipo: [],
       
       // Charts
-      charts: {},
-
-      dropdownVisible: {
-        horas: false,
-        productividad: false,
-        desempeno: false
-      }
+      charts: {}
     }
   },
   computed: {
@@ -462,25 +352,12 @@ export default {
   },
   async mounted() {
     await this.initializeDashboard();
+    this.mostrarAdvertencia = this.shouldShowWarning()
   },
   beforeUnmount() {
     this.destroyAllCharts();
-    document.removeEventListener('click', this.setupDropdownCloseListener)
-
   },
-  // mounted() {
-  //   this.setupDropdownCloseListener()
-  // },
   methods: {
-    toggleDropdown(section) {
-      Object.keys(this.dropdownVisible).forEach(key => {
-        if (key !== section) {
-          this.dropdownVisible[key] = false
-        }
-      })
-      this.dropdownVisible[section] = !this.dropdownVisible[section]
-    },
-
     // ========== INICIALIZACIÓN ==========
     async initializeDashboard() {
       this.isLoading = true;
@@ -489,8 +366,7 @@ export default {
           this.loadEstadisticas(),
           this.loadUsers(),
           this.loadHorasData(),
-          this.loadProductividadData(),
-          this.loadDesempenoData()
+          this.loadProductividadData()
         ]);
       } catch (error) {
         this.handleError('Error al cargar el dashboard', error);
@@ -528,11 +404,7 @@ export default {
     async loadHorasData(userId = this.userId) {
       if (!userId) return;
       try {
-        const endpoint = this.showTeamHoras 
-          ? `${API_BASE}/horas-equipo/${this.currentUser.id}`
-          : `${API_BASE}/horas/${userId}`;
-        
-        const response = await axios.get(endpoint);
+        const response = await axios.get(`${API_BASE}/horas/${userId}`);
         this.horasData = {
           diarias: response.data.horasDiarias || [],
           semanales: response.data.horasSemanales || []
@@ -548,34 +420,13 @@ export default {
     async loadProductividadData(userId = this.userId) {
       if (!userId) return;
       try {
-        const endpoint = this.showTeamProductividad
-          ? `${API_BASE}/productividad-equipo/${this.currentUser.id}`
-          : `${API_BASE}/productividad/${userId}`;
-        
-        const response = await axios.get(endpoint);
+        const response = await axios.get(`${API_BASE}/productividad/${userId}`);
         this.productividad = response.data;
-        
+
         await this.$nextTick();
         this.renderProductividadCharts();
       } catch (error) {
         this.handleError('Error al cargar datos de productividad', error);
-      }
-    },
-
-    async loadDesempenoData(userId = this.userId) {
-      if (!userId) return;
-      try {
-        if (this.showTeamDesempeno) {
-          const response = await axios.get(`${API_BASE}/desempeno-equipo/${this.currentUser.id}`);
-          this.desempenoEquipo = response.data || [];
-        } else {
-          const response = await axios.get(`${API_BASE}/desempeno/${userId}`);
-          this.desempeno = response.data || {};
-          await this.$nextTick();
-          this.renderDesempenoChart();
-        }
-      } catch (error) {
-        this.handleError('Error al cargar datos de desempeño', error);
       }
     },
 
@@ -584,76 +435,51 @@ export default {
       switch(section) {
         case 'horas':
           this.searchHoras = !this.searchHoras;
+          if (!this.searchHoras) this.searchTermHoras = ''; this.filteredUserHoras = [];
           break;
         case 'productividad':
           this.searchProductividad = !this.searchProductividad;
-          break;
-        case 'desempeno':
-          this.searchDesempeno = !this.searchDesempeno;
-          break;
-      }
-      
-      if (!this.searchHoras && !this.searchProductividad && !this.searchDesempeno) {
-        this.searchTerm = '',
-        this.filteredUsers = []
-      }
-    },
-
-    async toggleTeamView(section) {
-
-      this.dropdownVisible[section] = false
-
-      switch(section) {
-        case 'horas':
-          this.showTeamHoras = !this.showTeamHoras;
-          await this.loadHorasData();
-          break;
-        case 'productividad':
-          this.showTeamProductividad = !this.showTeamProductividad;
-          await this.loadProductividadData();
-          break;
-        case 'desempeno':
-          this.showTeamDesempeno = !this.showTeamDesempeno;
-          await this.loadDesempenoData();
+          if (!this.searchProductividad) this.searchTermProd = ''; this.filteredUserProd = [];
           break;
       }
     },
 
-    setupDropdownCloseListener() {
-      document.addEventListener('click', (e) => {
-        if (!e.target.closest('.dropdown')) {
-          Object.keys(this.dropdownVisible).forEach(key => {
-            this.dropdownVisible[key] = false
-          })
-        }
-      })
-    },
-
-    filterUsers() {
-      if (!this.searchTerm.trim()) {
-        this.filteredUsers = [];
+    // ---------------- HORAS ----------------
+    filterUsersHoras() {
+      if (this.searchTermHoras.trim() === '') {
+        this.filteredUserHoras = [];
         return;
       }
-      
-      const search = this.searchTerm.toLowerCase();
-      this.filteredUsers = this.users.filter(user => 
-        user.nombre.toLowerCase().includes(search) ||
-        user.paterno.toLowerCase().includes(search) ||
-        user.materno.toLowerCase().includes(search)
+      this.filteredUserHoras = this.users.filter(u =>
+        `${u.nombre} ${u.paterno} ${u.materno}`
+          .toLowerCase()
+          .includes(this.searchTermHoras.toLowerCase())
       );
     },
+    async selectUserHoras(user) {
+      this.selectedUserHoras = user;
+      this.searchTermHoras = '';
+      this.filteredUsersHoras = [];
+      this.loadHorasData(user.id_user);
+    },
 
-    async selectUser(user) {
-      this.selectedUser = user;
-      this.searchTerm = '';
-      this.filteredUsers = [];
-      
-      // Recargar datos para el usuario seleccionado
-      await Promise.all([
-        this.loadHorasData(user.id_user),
-        this.loadProductividadData(user.id_user),
-        this.loadDesempenoData(user.id_user)
-      ]);
+    // ---------------- PRODUCTIVIDAD ----------------
+    filterUsersProd() {
+      if (this.searchTermProd.trim() === '') {
+        this.filteredUserProd = [];
+        return;
+      }
+      this.filteredUserProd = this.users.filter(u =>
+        `${u.nombre} ${u.paterno} ${u.materno}`
+          .toLowerCase()
+          .includes(this.searchTermProd.toLowerCase())
+      );
+    },
+    async selectUserProd(user) {
+      this.selectedUserProd = user;
+      this.searchTermProd = '';
+      this.filteredUsersProd = [];
+      this.loadProductividadData(user.id_user);
     },
 
     // ========== UTILIDADES ==========
@@ -672,15 +498,14 @@ export default {
 
       return { start: monday, end: friday }
     },
-    getCurrentUserName() {
-      if (this.selectedUser) {
-        return `${this.selectedUser.nombre} ${this.selectedUser.paterno} ${this.selectedUser.materno}`; // ✅ Corregido: name → nombre
+
+    getCurrentUserName(user) {
+      if (user) {
+        return `${user.nombre || user.name || ''} ${user.paterno || ''} ${user.materno || ''}`.trim();
       }
-      
       if (this.currentUser) {
-        return `${this.currentUser.name || ''} ${this.currentUser.paterno || ''} ${this.currentUser.materno || ''}`.trim(); // ✅ Corregido: name → nombre
+        return `${this.currentUser.nombre || ''} ${this.currentUser.paterno || ''} ${this.currentUser.materno || ''}`.trim();
       }
-      
       return 'Usuario no encontrado';
     },
 
@@ -692,17 +517,15 @@ export default {
 
     shouldShowWarning() {
       const totalHoras = this.getTotalHorasSemanales();
-      const isEndOfWeek = dayjs().day() >= 4; // Jueves o viernes
+      const isEndOfWeek = dayjs().day() >= 4;
       return isEndOfWeek && totalHoras < 32;
     },
 
+    cerrarAdvertencia() {
+      this.mostrarAdvertencia = false
+    },
     formatDate(fecha) {
       return dayjs(fecha).locale('es').format('MMM DD');
-    },
-
-    clearSearch() {
-      this.searchTerm = '';
-      this.filteredUsers = [];
     },
 
     // ========== GRÁFICOS ==========
@@ -713,8 +536,6 @@ export default {
       // Gráfico Horas Diarias
       const ctxDiarias = document.getElementById('horasDiariasChart');
       const { start, end } = this.getCurrentWeekRange()
-    
-      // console.log("Datos antes del filtro:", this.horasData.diarias)
 
       const diariasSemana = this.horasData.diarias.filter(d => {
         if (!d.dia || typeof d.dia !== 'string') {
@@ -722,7 +543,6 @@ export default {
           return false
         }
 
-        // Extraer solo la parte de la fecha del formato ISO
         const fechaStr = d.dia.split('T')[0]
         const [year, month, day] = fechaStr.split("-").map(Number)
         const fecha = new Date(year, month - 1, day)
@@ -730,11 +550,8 @@ export default {
           console.warn("Fecha no válida:", d.dia)
           return false
         }
-        console.log("Fecha procesada:", fecha, "Rango:", start, end)
         return fecha >= start && fecha <= end
       })
-      // console.log("Rango semana:", start, end)
-      // console.log("Filtradas semana:", diariasSemana)
       
       if (ctxDiarias && diariasSemana.length > 0) {
 
@@ -763,7 +580,6 @@ export default {
             scales: {
               y: {
                 beginAtZero: true,
-                // suggestedMax: Math.max(...this.horasData.diarias.map(d => d.horas_totales || 0)) * 1.2
               },
               x: {
                 ticks: {
@@ -835,10 +651,6 @@ export default {
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            scales: {
-              // beginAtZero: true,
-              // suggestedMax: Math.max(...this.horasData.semanales.map(s => s.horas_totales || 0)) * 1.2
-            },
             plugins: {
               legend: {
                 display: false
@@ -855,10 +667,8 @@ export default {
       }
     },
 
-    // ✅ NUEVO MÉTODO: Gráficos de productividad
     renderProductividadCharts() {
       this.destroyChart('productividadTareasChart');
-      this.destroyChart('productividadAvanceChart');
       this.destroyChart('productividadMetaChart');
 
       // Gráfico de Tareas
@@ -883,34 +693,6 @@ export default {
             plugins: {
               legend: {
                 position: 'bottom'
-              }
-            }
-          }
-        });
-      }
-
-      // Gráfico de Avance Semanal
-      const ctxAvance = document.getElementById('productividadAvanceChart');
-      if (ctxAvance && this.productividad.weekly) {
-        this.charts.productividadAvanceChart = new ChartJS(ctxAvance, {
-          type: 'line',
-          data: {
-            labels: this.productividad.weekly.map(w => `Sem ${w.semana}`),
-            datasets: [{
-              label: 'Avance %',
-              data: this.productividad.weekly.map(w => w.promedio_avance || 0),
-              borderColor: '#0d6efd',
-              tension: 0.3,
-              fill: false
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              y: {
-                beginAtZero: true,
-                max: 100
               }
             }
           }
@@ -952,54 +734,6 @@ export default {
       }
     },
 
-    renderDesempenoChart() {
-      this.destroyChart('desempenoChart');
-
-      const ctxDesempeno = document.getElementById('desempenoChart');
-      if (ctxDesempeno && this.desempeno.horas_totales) {
-        this.charts.desempenoChart = new ChartJS(ctxDesempeno, {
-          type: 'bar',
-          data: {
-            labels: ['Horas Totales', 'Avance Total', 'Eficiencia x10'],
-            datasets: [{
-              label: 'Métricas',
-              data: [
-                this.desempeno.horas_totales || 0,
-                this.desempeno.avance_total || 0,
-                (this.desempeno.eficiencia || 0) * 10 // Escalado para visualización
-              ],
-              backgroundColor: ['#0d6efd', '#198754', '#dc3545'],
-              borderRadius: 4
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                display: false
-              },
-              tooltip: {
-                callbacks: {
-                  label: function(context) {
-                    if (context.dataIndex === 2) {
-                      return 'Eficiencia: ' + (context.parsed.y / 10).toFixed(2);
-                    }
-                    return context.label + ': ' + context.parsed.y;
-                  }
-                }
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: true
-              }
-            }
-          }
-        });
-      }
-    },
-
     destroyChart(chartName) {
       if (this.charts[chartName]) {
         this.charts[chartName].destroy();
@@ -1017,21 +751,15 @@ export default {
   watch: {
     // Limpiar búsqueda cuando se ocultan los buscadores
     searchHoras(newVal) {
-      if (!newVal && !this.searchProductividad && !this.searchDesempeno) {
-        this.searchTerm = '';
-        this.filteredUsers = [];
+      if (!newVal) {
+        this.searchTermHoras = '';
+        this.filteredUserHoras = [];
       }
     },
     searchProductividad(newVal) {
-      if (!newVal && !this.searchHoras && !this.searchDesempeno) {
-        this.searchTerm = '';
-        this.filteredUsers = [];
-      }
-    },
-    searchDesempeno(newVal) {
-      if (!newVal && !this.searchHoras && !this.searchProductividad) {
-        this.searchTerm = '';
-        this.filteredUsers = [];
+      if (!newVal) {
+        this.searchTermProd = '';
+        this.filteredUserProd = [];
       }
     }
   }

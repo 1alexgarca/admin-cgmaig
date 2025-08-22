@@ -322,59 +322,67 @@ app.get('/api/horas/:userId', async (req, res) => {
 });
 
 // Horas y asistencias por equipo
-app.get('/api/horas-equipo/:adminId', async (req, res) => {
-  const { adminId } = req.params;
-  try {
-    const [horasDiarias] = await pool.query(`
-      SELECT 
-        DATE(r.fecha_actualizacion) AS dia,
-        SUM(r.horas_trabajadas) AS horas_totales,
-        SUM(CASE WHEN r.es_hora_extra = 1 THEN r.horas_trabajadas ELSE 0 END) AS horas_extra
-      FROM registro_actividad r
-      JOIN actividades a ON r.id_actividad = a.id_activities
-      JOIN usuarios u ON a.usuario_asignado = u.id_user
-      WHERE u.usuario_creador = ?
-      GROUP BY dia
-      ORDER BY dia ASC
-    `, [adminId]);
+// app.get('/api/horas-equipo/:adminId', async (req, res) => {
+//   const { adminId } = req.params;
+//   try {
+//     const [horasDiarias] = await pool.query(`
+//       SELECT 
+//         DATE(r.fecha_actualizacion) AS dia,
+//         SUM(r.horas_trabajadas) AS horas_totales,
+//         SUM(CASE WHEN r.es_hora_extra = 1 THEN r.horas_trabajadas ELSE 0 END) AS horas_extra
+//       FROM registro_actividad r
+//       JOIN actividades a ON r.id_actividad = a.id_activities
+//       JOIN usuarios u ON a.usuario_asignado = u.id_user
+//       WHERE u.usuario_creador = ?
+//       GROUP BY dia
+//       ORDER BY dia ASC
+//     `, [adminId]);
 
-    const [horasSemanales] = await pool.query(`
-      SELECT 
-        YEAR(r.fecha_actualizacion) AS anio,
-        WEEK(r.fecha_actualizacion, 1) AS semana,
-        SUM(r.horas_trabajadas) AS horas_totales,
-        SUM(CASE WHEN r.es_hora_extra = 1 THEN r.horas_trabajadas ELSE 0 END) AS horas_extra,
-        ROUND((SUM(r.horas_trabajadas)/(COUNT(DISTINCT u.id_user)*40))*100,2) AS porcentaje_meta
-      FROM registro_actividad r
-      JOIN actividades a ON r.id_actividad = a.id_activities
-      JOIN usuarios u ON a.usuario_asignado = u.id_user
-      WHERE u.usuario_creador = ?
-      GROUP BY anio, semana
-      ORDER BY anio ASC, semana ASC
-    `, [adminId]);
+//     const [horasSemanales] = await pool.query(`
+//       SELECT 
+//         YEAR(r.fecha_actualizacion) AS anio,
+//         WEEK(r.fecha_actualizacion, 1) AS semana,
+//         SUM(r.horas_trabajadas) AS horas_totales,
+//         SUM(CASE WHEN r.es_hora_extra = 1 THEN r.horas_trabajadas ELSE 0 END) AS horas_extra,
+//         ROUND((SUM(r.horas_trabajadas)/(COUNT(DISTINCT u.id_user)*40))*100,2) AS porcentaje_meta
+//       FROM registro_actividad r
+//       JOIN actividades a ON r.id_actividad = a.id_activities
+//       JOIN usuarios u ON a.usuario_asignado = u.id_user
+//       WHERE u.usuario_creador = ?
+//       GROUP BY anio, semana
+//       ORDER BY anio ASC, semana ASC
+//     `, [adminId]);
 
-    res.json({ horasDiarias, horasSemanales });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al cargar horas y asistencias del equipo' });
-  }
-});
+//     res.json({ horasDiarias, horasSemanales });
+//   } catch (error) {
+//     res.status(500).json({ error: 'Error al cargar horas y asistencias del equipo' });
+//   }
+// });
 
 // Productividad y avance por usuario
 app.get('/api/productividad/:userId', async (req, res) => {
   const { userId } = req.params;
   try {
     const [summary] = await pool.query(`
-      SELECT 
-        COUNT(a.id_activities) AS total_tareas,
-        SUM(CASE WHEN a.avance=100 THEN 1 ELSE 0 END) AS tareas_completadas,
-        COUNT(a.id_activities) - SUM(CASE WHEN a.avance=100 THEN 1 ELSE 0 END) AS tareas_pendientes,
-        ROUND(AVG(a.avance),2) AS promedio_avance,
-        SUM(r.horas_trabajadas) AS horas_invertidas,
-        ROUND((SUM(r.horas_trabajadas)/40)*100,2) AS porcentaje_horas
+       SELECT
+          YEAR(a.fecha_creacion) AS anio,
+          WEEK(a.fecha_creacion, 1) AS semana,
+          COUNT(*) AS total_tareas,
+          SUM(CASE WHEN a.avance = 100 THEN 1 ELSE 0 END) AS tareas_completadas,
+          COUNT(*) - SUM(CASE WHEN a.avance = 100 THEN 1 ELSE 0 END) AS tareas_pendientes,
+          ROUND(AVG(a.avance), 2) AS promedio_avance,
+          COALESCE(SUM(ra.horas_invertidas), 0) AS horas_invertidas,
+          ROUND((COALESCE(SUM(ra.horas_invertidas), 0) / 40) * 100, 2) AS porcentaje_horas
       FROM actividades a
-      JOIN registro_actividad r ON a.id_activities = r.id_actividad
+      LEFT JOIN (
+          SELECT id_actividad, SUM(horas_trabajadas) AS horas_invertidas
+          FROM registro_actividad
+          GROUP BY id_actividad
+      ) ra ON ra.id_actividad = a.id_activities
       WHERE a.usuario_asignado = ?
-    `, [userId])
+      GROUP BY anio, semana
+      ORDER BY anio DESC, semana DESC;
+      `, [userId])
 
     const [weekly] = await pool.query(`
       SELECT 
@@ -395,72 +403,28 @@ app.get('/api/productividad/:userId', async (req, res) => {
 });
 
 // Productividad y avance por equipo
-app.get('/api/productividad-equipo/:adminId', async (req, res) => {
-  const { adminId } = req.params;
-  try {
-    const [data] = await pool.query(`
-      SELECT 
-        COUNT(a.id_activities) AS total_tareas,
-        SUM(CASE WHEN a.avance=100 THEN 1 ELSE 0 END) AS tareas_completadas,
-        ROUND(AVG(a.avance),2) AS promedio_avance,
-        SUM(r.horas_trabajadas) AS horas_invertidas
-      FROM actividades a
-      JOIN registro_actividad r ON a.id_activities = r.id_actividad
-      JOIN usuarios u ON a.usuario_asignado = u.id_user
-      WHERE u.usuario_creador = ?
-    `, [adminId]);
+// app.get('/api/productividad-equipo/:adminId', async (req, res) => {
+//   const { adminId } = req.params;
+//   try {
+//     const [data] = await pool.query(`
+//       SELECT 
+//         COUNT(a.id_activities) AS total_tareas,
+//         SUM(CASE WHEN a.avance=100 THEN 1 ELSE 0 END) AS tareas_completadas,
+//         ROUND(AVG(a.avance),2) AS promedio_avance,
+//         SUM(r.horas_trabajadas) AS horas_invertidas
+//       FROM actividades a
+//       JOIN registro_actividad r ON a.id_activities = r.id_actividad
+//       JOIN usuarios u ON a.usuario_asignado = u.id_user
+//       WHERE u.usuario_creador = ?
+//     `, [adminId]);
 
-    res.json(data[0]);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al cargar productividad del equipo' });
-  }
-});
+//     res.json(data[0]);
+//   } catch (error) {
+//     res.status(500).json({ error: 'Error al cargar productividad del equipo' });
+//   }
+// });
 
-// Desempeño por usuario
-app.get('/api/desempeno/:userId', async (req, res) => {
-  const { userId } = req.params;
-  try {
-    const [rows] = await pool.query(`
-      SELECT 
-        CONCAT(u.nombre,' ',u.paterno,' ',u.materno) AS nombre,
-        SUM(r.horas_trabajadas) AS horas_totales,
-        SUM(a.avance) AS avance_total,
-        ROUND(SUM(a.avance)/NULLIF(SUM(r.horas_trabajadas),0),2) AS eficiencia
-      FROM usuarios u
-      JOIN actividades a ON u.id_user = a.usuario_asignado
-      JOIN registro_actividad r ON r.id_actividad = a.id_activities
-      WHERE u.id_user = ?
-      GROUP BY u.id_user
-    `, [userId]);
-    res.json(rows[0]);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al cargar desempeño' });
-  }
-});
 
-// Desempeño por equipo (ranking)
-app.get('/api/desempeno-equipo/:adminId', async (req, res) => {
-  const { adminId } = req.params;
-  try {
-    const [rows] = await pool.query(`
-      SELECT 
-        CONCAT(u.nombre,' ',u.paterno,' ',u.materno) AS nombre,
-        SUM(r.horas_trabajadas) AS horas_totales,
-        SUM(a.avance) AS avance_total,
-        ROUND(SUM(a.avance)/SUM(r.horas_trabajadas),2) AS eficiencia
-      FROM usuarios u
-      JOIN actividades a ON u.id_user = a.usuario_asignado
-      JOIN registro_actividad r ON r.id_actividad = a.id_activities
-      WHERE u.usuario_creador = ?
-      GROUP BY u.id_user
-      ORDER BY eficiencia DESC
-    `, [adminId]);
-
-    res.json(rows);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al cargar desempeño del equipo' });
-  }
-});
 
 
 // ------------------------- GESTIÓN DE USUARIOS ----------------------------- //
