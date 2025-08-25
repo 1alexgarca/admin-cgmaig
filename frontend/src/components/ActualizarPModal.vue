@@ -64,4 +64,3 @@ export default {
     font-size: 1.5rem;
 }
 </style>
-

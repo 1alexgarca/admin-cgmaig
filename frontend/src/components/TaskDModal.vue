@@ -1,6 +1,6 @@
 <template>
   <div v-if="show" class="modal-overlay">
-    <div class="modal-content">
+    <div class="modal-content rounded-5">
       <button class="close-btn" @click="$emit('close')">
         <i class="bi bi-x"></i>
       </button>
@@ -49,8 +49,8 @@ export default {
   background: white;
   padding: 2rem;
   border-radius: 8px;
-  width: 90%;
-  max-width: 750px;
+  width: 70%;
+  max-width: 550px;
   position: relative;
 }
 

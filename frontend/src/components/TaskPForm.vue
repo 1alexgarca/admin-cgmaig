@@ -1,132 +1,280 @@
 <template>
-    <div class="d-flex">
-    <!-- Panel de Información -->
-    <div style="margin-right: 2rem; width: 60%;">
-      <div class="card bg-secondary-subtle">
-        <div class="card-body" style="height: auto;">
-          <h6>Usuario Asignado:</h6>
-          <p>{{ datos.asignado }}</p>
-          <h6>Proyecto</h6>
-          <p>{{ datos.proyecto }}</p>
-          <h6>Actividad</h6>
-          <p>{{ datos.actividad }}</p>
-          <h6>Descripción</h6>
-          <p>{{ datos.descripcion }}</p>
-          <h6>Horas trabajadas</h6>
-          <p>{{ datos.trabajadas }}</p>
+    <div class="modal-backdrop">
+      <div class="modal-container">
+        <!-- Header del Modal -->
+        <div class="modal-header">
+          <h2 class="modal-title">
+            <i class="fas fa-edit"></i>
+            Editar Tarea
+          </h2>
+          <button type="button" class="btn-close" @click="$emit('cancel')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
 
-          <div class="d-flex justify-content-between">
-            <div>
-              <h6>Avance</h6>
-              <p>{{ datos.avance }}%</p>
+        <!-- Contenido Principal -->
+        <div class="modal-content">
+          <div class="content-layout">
+            <!-- Panel de Información -->
+            <div class="info-panel">
+              <div class="info-card">
+                <div class="info-header">
+                  <i class="fas fa-info-circle"></i>
+                  <h3>Información de la Tarea</h3>
+                </div>
+                <div class="info-body">
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="fas fa-user"></i>
+                      Usuario Asignado
+                    </div>
+                    <div class="info-value">{{ datos.asignado }}</div>
+                  </div>
+                  
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="fas fa-project-diagram"></i>
+                      Proyecto
+                    </div>
+                    <div class="info-value">{{ datos.proyecto }}</div>
+                  </div>
+                  
+                  <div class="d-flex justify-content-between">
+                    <div class="info-item">
+                      <div class="info-label">
+                        <i class="fas fa-tasks"></i>
+                        Actividad
+                      </div>
+                      <div class="info-value">{{ datos.actividad }}</div>
+                    </div>
+
+                    <div class="info item">
+                      <div class="info-label text-center">
+                        Avance
+                      </div>
+                      <div class="progress-container">
+                        <div class="progress-bar">
+                          <div class="progress-fill" :style="{ width: datos.avance + '%' }"></div>
+                        </div>
+                        <span class="progress-text">{{ datos.avance }} %</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="fas fa-align-left"></i>
+                      Descripción
+                    </div>
+                    <div class="info-value">{{ datos.descripcion }}</div>
+                  </div>
+
+                  <div class="d-flex justify-content-between">
+                    <div class="info-item">
+                      <div class="info-label">
+                        <i class="fas fa-clock"></i>
+                        Horas Trabajadas
+                      </div>
+                      <div class="info-value">{{ datos.trabajadas }} hrs</div>
+                    </div>
+
+                    <div class="info-item">
+                      <div class="info-label">
+                        <i class="fas fa-flag"></i>
+                        Prioridad
+                      </div>
+                      <div class="info-value">
+                        <span class="priority-badge"
+                          :class="{
+                            'priority-alta': datos.prioridad.toLowerCase() === 'alta',
+                            'priority-media': datos.prioridad.toLowerCase() === 'media',
+                            'priority-baja': datos.prioridad.toLowerCase() === 'baja'
+                          }">
+                          {{ datos.prioridad }}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div class="info-item">
+                      <div class="info-label">
+                        <i class="fas fa-calendar-alt"></i>
+                        Fecha de Fin
+                      </div>
+                      <div class="info-value">{{ datos.fecha_fin }}</div>
+                    </div>
+
+                    
+
+                  </div>
+
+                   <div class="stat-item">
+                      <div class="stat-label">Avance</div>
+                      <div class="progress-container">
+                        <div class="progress-bar">
+                          <div class="progress-fill" :style="{ width: datos.avance + '%' }"></div>
+                        </div>
+                        <span class="progress-text">{{ datos.avance }}%</span>
+                      </div>
+                    </div>
+                </div>
+              </div>
             </div>
-            <div>
-              <h6>Fecha de fin</h6>
-              <p>{{ datos.fecha_fin }}</p>
-            </div>
-            <div>
-              <h6>Prioridad</h6>
-              <span style="height: 20px; width: 60px;" class="badge"
-                :class="{
-                  'bg-danger': datos.prioridad.toLowerCase() === 'alta',
-                  'bg-warning': datos.prioridad.toLowerCase() === 'media',
-                  'bg-success': datos.prioridad.toLowerCase() === 'baja'
-                }">
-                {{ datos.prioridad }}
-              </span>
+
+            <!-- Formulario de Edición -->
+            <div class="form-panel">
+              <form @submit.prevent="handleSaved" class="edit-form">
+                <div class="form-header">
+                  <h3>
+                    <i class="fas fa-edit"></i>
+                    Campos a Modificar
+                  </h3>
+                  <p>Activa los campos que deseas editar</p>
+                </div>
+
+                <!-- Fecha fin -->
+                <div class="form-group">
+                  <div class="field-header">
+                    <div class="field-info">
+                      <i class="fas fa-calendar-check"></i>
+                      <label class="field-label">Fecha de Fin</label>
+                    </div>
+                    <div class="toggle-container">
+                      <input v-model="selectedFields" value="limited" type="checkbox" 
+                             class="toggle-switch" id="toggle-limited">
+                      <label for="toggle-limited" class="toggle-label"></label>
+                    </div>
+                  </div>
+                  <input type="date" 
+                         class="form-input" 
+                         v-model="form.limited" 
+                         :disabled="!selectedFields.includes('limited')"
+                         :class="{ 'input-disabled': !selectedFields.includes('limited') }">
+                </div>
+
+                <!-- Actividad -->
+                <div class="form-group">
+                  <div class="field-header">
+                    <div class="field-info">
+                      <i class="fas fa-clipboard-list"></i>
+                      <label class="field-label">Actividad</label>
+                    </div>
+                    <div class="toggle-container">
+                      <input v-model="selectedFields" value="activity" type="checkbox" 
+                             class="toggle-switch" id="toggle-activity">
+                      <label for="toggle-activity" class="toggle-label"></label>
+                    </div>
+                  </div>
+                  <textarea v-model="form.activity" 
+                           class="form-input form-textarea" 
+                           :class="{ 
+                             'is-invalid': errors.activity, 
+                             'input-disabled': !selectedFields.includes('activity') 
+                           }" 
+                           rows="3" 
+                           :disabled="!selectedFields.includes('activity')"
+                           placeholder="Describe la actividad..."></textarea>
+                </div>
+
+                <!-- Prioridad -->
+                <div class="form-group">
+                  <div class="field-header">
+                    <div class="field-info">
+                      <i class="fas fa-exclamation-triangle"></i>
+                      <label class="field-label">Prioridad</label>
+                    </div>
+                    <div class="toggle-container">
+                      <input v-model="selectedFields" value="priority" type="checkbox" 
+                             class="toggle-switch" id="toggle-priority">
+                      <label for="toggle-priority" class="toggle-label"></label>
+                    </div>
+                  </div>
+                  <div class="priority-selector" 
+                       :class="{ 
+                         'is-invalid': errors.priority,
+                         'selector-disabled': !selectedFields.includes('priority')
+                       }">
+                    <div class="priority-option" 
+                         :class="{ 
+                           'priority-selected': form.priority.toLowerCase() === 'alta',
+                           'option-disabled': !selectedFields.includes('priority')
+                         }" 
+                         @click="updatePriority('alta', 'priority')">
+                      <div class="priority-color priority-color-alta"></div>
+                      <span>Alta</span>
+                      <i class="fas fa-check" v-if="form.priority.toLowerCase() === 'alta'"></i>
+                    </div>
+                    
+                    <div class="priority-option" 
+                         :class="{ 
+                           'priority-selected': form.priority.toLowerCase() === 'media',
+                           'option-disabled': !selectedFields.includes('priority')
+                         }" 
+                         @click="updatePriority('media', 'priority')">
+                      <div class="priority-color priority-color-media"></div>
+                      <span>Media</span>
+                      <i class="fas fa-check" v-if="form.priority.toLowerCase() === 'media'"></i>
+                    </div>
+                    
+                    <div class="priority-option" 
+                         :class="{ 
+                           'priority-selected': form.priority.toLowerCase() === 'baja',
+                           'option-disabled': !selectedFields.includes('priority')
+                         }" 
+                         @click="updatePriority('baja', 'priority')">
+                      <div class="priority-color priority-color-baja"></div>
+                      <span>Baja</span>
+                      <i class="fas fa-check" v-if="form.priority.toLowerCase() === 'baja'"></i>
+                    </div>
+                  </div>
+                  <div class="error-message" v-if="errors.priority">{{ errors.priority }}</div>
+                </div>
+
+                <!-- Descripción -->
+                <div class="form-group">
+                  <div class="field-header">
+                    <div class="field-info">
+                      <i class="fas fa-file-alt"></i>
+                      <label class="field-label">Descripción</label>
+                    </div>
+                    <div class="toggle-container">
+                      <input v-model="selectedFields" value="description" type="checkbox" 
+                             class="toggle-switch" id="toggle-description">
+                      <label for="toggle-description" class="toggle-label"></label>
+                    </div>
+                  </div>
+                  <textarea v-model="form.description" 
+                           class="form-input form-textarea" 
+                           rows="4" 
+                           :class="{ 
+                             'is-invalid': errors.description,
+                             'input-disabled': !selectedFields.includes('description')
+                           }" 
+                           :disabled="!selectedFields.includes('description')"
+                           placeholder="Descripción detallada de la tarea..."></textarea>
+                  <div class="error-message" v-if="errors.description">{{ errors.description }}</div>
+                </div>
+
+                <!-- Botones -->
+                <div class="form-actions">
+                  <button type="button" class="btn btn-secondary" @click="$emit('cancel')">
+                    <i class="fas fa-times"></i>
+                    Cancelar
+                  </button>
+                  <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i>
+                    Guardar Cambios
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
       </div>
     </div>
-      <form @submit.prevent="handleSaved" style="width: 50%;">
-        <h2 class="fs-3 mb-4">Editar algun campo</h2>
-    
-        <div class="mb-3">
-          <div class="row justify-content-between">
-            <div class="col-4">
-              <label for="chkLimited" class="form-label">Fecha fin</label>
-            </div>
-            <div class="col-4 form-check form-switch d-flex justify-content-end">
-              <input v-model="selectedFields" value="limited" type="checkbox" role="switch" class="form-check-input">
-            </div>
-          </div>
-          <input type="date" class="form-control" v-model="form.limited" :disabled="!selectedFields.includes('limited')">
-        </div>
-    
-    
-    
-        <div class="mb-3">
-          <div class="row justify-content-between">
-            <div class="col-4">
-              <label for="chlActivity" class="form-label">Actividad</label>
-            </div>
-            <div class="col-4 form-check form-switch d-flex justify-content-end">
-              <input v-model="selectedFields" value="activity" type="checkbox" role="switch" class="form-check-input">
-            </div>
-          </div>
-          <textarea v-model="form.activity" class="form-control" :class="{ 'is-invalid': errors.activity }" rows="2" :disabled="!selectedFields.includes('activity')"></textarea>
-        </div>
-    
-        
-    
-        <div class="mb-3">
-          <div class="row justify-content-between">
-            <div class="col-4">
-              <label for="chkPriority" class="form-label">Prioridad</label>
-            </div>
-            <div class="col-4 form-check form-switch d-flex justify-content-end">
-              <input v-model="selectedFields" value="priority" type="checkbox" role="switch" class="form-check-input">
-            </div>
-          </div>
-          <div class="d-flex justify-content-between align-items-center gap-2" :class="{ 'is-invalid': errors.priority }">
-            <div class="priority-option" :class="{ 'priority-high': form.priority.toLowerCase() === 'alta' }" @click="updatePriority('alta', 'priority')">
-              <input v-model="form.priority" type="radio" name="priority" id="priorityHigh" value="alta" class="d-none" :disabled="!selectedFields.includes('priority')">
-              <label for="priorityHigh">Alta</label>
-            </div>
-            
-            <div class="priority-option" :class="{ 'priority-medium': form.priority.toLowerCase() === 'media' }" @click="updatePriority('media', 'priority')">
-              <input v-model="form.priority" type="radio" name="priority" id="priorityMedium" value="media" class="d-none" :disabled="!selectedFields.includes('priority')">
-              <label for="priorityMedium">Media</label>
-            </div>
-            
-            <div class="priority-option" :class="{ 'priority-low': form.priority.toLowerCase() === 'baja' }" @click="updatePriority('baja', 'priority')">
-              <input v-model="form.priority" type="radio" name="priority" id="priorityLow" value="baja" class="d-none" :disabled="!selectedFields.includes('priority')">
-              <label for="priorityLow">Baja</label>
-            </div>
-          </div>
-          <div class="invalid-feedback d-block" v-if="errors.priority">{{ errors.priority }}</div>
-        </div>
-        
-        <div class="mb-3">
-          <div class="row justify-content-between">
-            <div class="col-4">
-              <label for="chkDescription" class="form-label">Descripción</label>
-            </div>
-            <div class="col-4 form-check form-switch d-flex justify-content-end">
-              <input v-model="selectedFields" value="description" type="checkbox" role="switch" class="form-check-input">
-            </div>
-          </div>
-          <textarea v-model="form.description" class="form-control" rows="3" :class="{ 'is-invalid': errors.description }" :disabled="!selectedFields.includes('description')"></textarea>
-          <div class="invalid-feedback" v-if="errors.description">{{ errors.description }}</div>
-        </div>
-        
-        <div class="d-flex justify-content-end gap-2">
-          <button type="button" class="btn btn-secondary" @click="$emit('cancel')">
-            Cancelar
-          </button>
-          <button type="submit" class="btn btn-primary">
-            Guardar
-          </button>
-        </div>
-      </form>
-
-    </div>
-
 </template>
 
 <script>
-
 import axios from 'axios'
 import { useToast } from 'vue-toastification'
 import { h } from 'vue'
@@ -257,10 +405,7 @@ export default {
           })
         );
       }
-    }
-
-
-,
+    },
     resetForm() {
       this.form = {
         user: '',
@@ -276,116 +421,534 @@ export default {
 </script>
 
 <style scoped>
-.edit-form-container {
-  background: #ffffff;
-  border-radius: 10px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e9ecef;
-}
+/* Importar Font Awesome */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
 
-.form-section {
-  background: #f8f9fa;
-  padding: 20px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-}
-
-.form-label {
-  font-weight: 500;
-  color: #2a5298;
-  margin-bottom: 8px;
-  display: block;
-}
-
-.form-control {
-  border: 1px solid #dee2e6;
-  border-radius: 5px;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.form-control:focus {
-  border-color: #60a5fa;
-  box-shadow: 0 0 5px rgba(96, 165, 250, 0.5);
-}
-
-.btn-primary {
-  background-color: #2a5298;
-  border-color: #2a5298;
-}
-
-.btn-primary:hover {
-  background-color: #1e3c72;
-  border-color: #1e3c72;
-}
-
-.btn-secondary {
-  background-color: #6c757d;
-  border-color: #6c757d;
-}
-
-.btn-secondary:hover {
-  background-color: #5a6268;
-  border-color: #5a6268;
-}
-
-.invalid-feedback {
-  font-size: 0.875rem;
-  color: #dc3545;
-}
-
-.card.bg-secondary-subtle {
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-}
-
-.card-body h6 {
-  color: #2a5298;
-  font-weight: 600;
-  margin-bottom: 5px;
-}
-
-.card-body p {
-  margin-bottom: 10px;
-  color: #333;
-}
-
-
-.priority-option {
-  height: 2.5rem;
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
-  border: 1px solid #dee2e6;
-  border-radius: 0.375rem;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
 }
 
-.priority-option label {
+.modal-container {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 20px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+  width: 95%;
+  max-width: 1200px;
+  max-height: 90vh;
+  overflow: hidden;
+  animation: slideUp 0.3s ease;
+}
+
+.modal-header {
+  background: rgb(105, 28, 32);
+  color: white;
+  padding: 1.5rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 3px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.btn-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+}
+
+.modal-content {
+  padding: 0;
+  overflow-y: auto;
+  max-height: calc(90vh - 80px);
+}
+
+.content-layout {
+  display: flex;
+  gap: 0;
+  min-height: 500px;
+  max-height: calc(90vh - 120px);
+}
+
+.info-panel {
+  flex: 1;
+  background: linear-gradient(135deg, #f1f3f4 0%, #e8eaf6 100%);
+  padding: 2rem;
+  border-right: 1px solid #e0e6ed;
+}
+
+.info-card {
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  height: 100%;
+}
+
+.info-header {
+  background: rgb(188, 149, 92);
+  color: white;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.info-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.info-body {
+  padding: 1.5rem;
+}
+
+.info-item {
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.info-item:last-child {
+  border-bottom: none;
   margin-bottom: 0;
 }
 
-.priority-high {
-  background-color: rgba(220, 53, 69, 0.1);
-  border-color: rgba(220, 53, 69, 0.3);
-  color: #dc3545;
+.info-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #4a5568;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
 }
 
-.priority-medium {
-  background-color: rgba(255, 193, 7, 0.1);
-  border-color: rgba(255, 193, 7, 0.3);
-  color: #ffc107;
+.info-value {
+  color: #2d3748;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  padding-left: 1.25rem;
 }
 
-.priority-low {
-  background-color: rgba(25, 135, 84, 0.1);
-  border-color: rgba(25, 135, 84, 0.3);
-  color: #198754;
+.info-stats {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #f0f2f5;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.stat-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #4a5568;
+  font-size: 0.875rem;
+}
+
+.stat-value {
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.progress-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.progress-bar {
+  width: 100px;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, rgb(16, 49, 43), rgb(111, 114, 113));
+  border-radius: 10px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgb(16, 49, 43);
+}
+
+.priority-badge {
+  padding: 0.375rem 0.875rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.priority-alta {
+  background: linear-gradient(135deg, rgba(105, 28, 32, 0.2), rgba(105, 28, 32, 0.1));
+  color: rgb(105, 28, 32);
+  border: 1px solid rgba(105, 28, 32, 0.3);
+}
+
+.priority-media {
+  background: linear-gradient(135deg, rgba(188, 149, 92, 0.2), rgba(188, 149, 92, 0.1));
+  color: rgb(188, 149, 92);
+  border: 1px solid rgba(188, 149, 92, 0.3);
+}
+
+.priority-baja {
+  background: linear-gradient(135deg, rgba(16, 49, 43, 0.2), rgba(16, 49, 43, 0.1));
+  color: rgb(16, 49, 43);
+  border: 1px solid rgba(16, 49, 43, 0.3);
+}
+
+.form-panel {
+  flex: 1;
+  background: white;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  margin: 1rem;
+}
+
+.edit-form {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #f0f2f5;
+}
+
+.form-header h3 {
+  margin: 0 0 0.5rem 0;
+  color: #2d3748;
+  font-size: 1.375rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.form-header p {
+  margin: 0;
+  color: #718096;
+  font-size: 0.95rem;
+}
+
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.field-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.field-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.field-label {
+  font-weight: 600;
+  color: #4a5568;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.toggle-container {
+  position: relative;
+}
+
+.toggle-switch {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-label {
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+  background: #cbd5e0;
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.toggle-label::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch:checked + .toggle-label {
+  background: linear-gradient(135deg, rgb(16, 49, 43), rgb(111, 114, 113));
+}
+
+.toggle-switch:checked + .toggle-label::after {
+  transform: translateX(26px);
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: rgb(16, 49, 43);
+  box-shadow: 0 0 0 3px rgba(16, 49, 43, 0.1);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+.input-disabled {
+  background: #f7fafc !important;
+  color: #a0aec0 !important;
+  cursor: not-allowed !important;
+}
+
+.priority-selector {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.priority-option {
+  flex: 1;
+  padding: 0.75rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  position: relative;
+  background: white;
+  font-size: 0.85rem;
 }
 
 .priority-option:hover {
-  background-color: #f8f9fa;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.priority-selected {
+  border-color: rgb(16, 49, 43);
+  background: linear-gradient(135deg, #f7fafc, #edf2f7);
+  color: rgb(16, 49, 43);
+}
+
+.option-disabled {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+}
+
+.option-disabled:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.priority-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.priority-color-alta {
+  background: linear-gradient(135deg, rgb(105, 28, 32), rgba(105, 28, 32, 0.8));
+}
+
+.priority-color-media {
+  background: linear-gradient(135deg, rgb(188, 149, 92), rgba(188, 149, 92, 0.8));
+}
+
+.priority-color-baja {
+  background: linear-gradient(135deg, rgb(16, 49, 43), rgba(16, 49, 43, 0.8));
+}
+
+.selector-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.error-message {
+  color: #e53e3e;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.error-message::before {
+  content: '⚠️';
+}
+
+.form-actions {
+  margin-top: auto;
+  display: flex;
+  gap: 1rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #f0f2f5;
+  flex-shrink: 0;
+}
+
+.btn {
+  padding: 0.875rem 1.5rem;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  min-height: 48px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, rgb(16, 49, 43) 0%, rgb(111, 114, 113) 100%);
+  color: white;
+  flex: 1;
+  justify-content: center;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(16, 49, 43, 0.3);
+}
+
+.btn-secondary {
+  background: #e2e8f0;
+  color: #4a5568;
+  flex: 0 0 auto;
+}
+
+.btn-secondary:hover {
+  background: #cbd5e0;
+  transform: translateY(-1px);
+}
+
+.is-invalid {
+  border-color: #e53e3e !important;
+  box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1) !important;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(50px) scale(0.95);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .content-layout {
+    flex-direction: column;
+  }
+  
+  .info-panel {
+    border-right: none;
+    border-bottom: 1px solid #e0e6ed;
+  }
+  
+  .modal-container {
+    width: 100%;
+    height: 100vh;
+    border-radius: 0;
+    max-height: 100vh;
+  }
+  
+  .priority-selector {
+    flex-direction: column;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
 }
 </style>

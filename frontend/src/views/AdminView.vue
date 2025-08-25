@@ -510,9 +510,23 @@ export default {
     },
 
     getTotalHorasSemanales() {
-      if (!this.horasData.semanales?.length) return 0;
-      const currentWeek = this.horasData.semanales[this.horasData.semanales.length - 1];
-      return currentWeek?.horas_totales || 0;
+      if (!this.horasData.diarias?.length) return 0
+
+      const { start, end } = this.getCurrentWeekRange()
+      const diariasSemana = this.horasData.diarias.filter(d => {
+        if (!d.dia || typeof d.dia !== 'string') return false
+
+        const fechaStr = d.dia.split('T')[0]
+        const [year, month, day] = fechaStr.split("-").map(Number)
+        const fecha = new Date(year, month -1, day)
+
+        return fecha >= start && fecha <= end
+      })
+      return diariasSemana.reduce((total, d) => total + (d.horas_totales || 0), 0)
+
+      // if (!this.horasData.semanales?.length) return 0;
+      // const currentWeek = this.horasData.semanales[this.horasData.semanales.length - 1];
+      // return currentWeek?.horas_totales || 0;
     },
 
     shouldShowWarning() {

@@ -1,36 +1,57 @@
 <template>
-    <div class="d-flex justify-content-center mb-3">
-        <span class="text-center rounded-5 fs-2 col-md-2 icono_bg" >
-            <i class="bi bi-exclamation-triangle-fill text-danger"></i>
-        </span>
+<div>
+  <div class="d-flex justify-content-center row">
+    <div class="rounded-circle d-flex justify-content-center align-items-center fs-1 " style="height: 80px; width: 80px;">
+      <i class="bi bi-exclamation-triangle-fill"></i>
     </div>
-    <div class="text-center">
-        <p class="fs-4 fw-bold text-pass">¿Seguro quieres eliminar la actividad asignada a?</p>
+    <div class="text-center mt-3 mb-4">
+      <p class="fs-4 fw-bold">Confirmar Eliminación</p>
+      <small>Esta acción no se puede deshacer</small>
     </div>
 
-    <form @submit.prevent="handleSaved">
-        <div class="card text-center mb-4">
-            <div class="card-header text-gob text-white fw-semibold">
-                {{ datos.asignado }}
-            </div>
-            <div class="card-body">
-                <h5 class="card-title fw-bold text-pass">{{ datos.proyecto }}</h5>
-                <span class="d-flex justify-content-center">
-                    <p class="card-text fw-bolder bg-gob text-white rounded-5" style="width: auto; padding: 0rem 1rem 0rem 1rem;">
-                        {{ datos.actividad }}
-                    </p>
-                </span>
-                <p class="card-text">{{ datos.descripcion }}</p>
-            </div>
+    <div>
+      <p class="fw-bold text-center">
+        ¿Estás seguro de que deseas eliminar esta actividad?
+      </p>
+    </div>
+  </div>
+  
+  <form @submit.prevent="handleSaved">
+    <div class="card p-3 rounded-5 activity-card">
+      <div class="card-body">
+        <div class="text-center text-body-secondary row">
+          <small>Asignado:</small>
+          <p class="text-black fw-medium">{{ datos.asignado }}</p>
         </div>
-
-        <div class="d-grid gap-2">
-            <button class="btn btn-danger" type="submit">Eliminar Actividad</button>
-            <button class="btn btn-outline-dark" type="button" @click="$emit('cancel')">Cancelar</button>
+        <div class="row mb-3">
+          <small class="mb-2">PROYECTO</small>
+          <h5 class="fw-bold">{{ datos.proyecto }}</h5>
         </div>
-    </form>
+        <div class="row mb-3">
+          <small class="mb-2">ACTIVIDAD</small>
+          <div class="rounded-pill p-2 d-flex align-items-center justify-content-center fw-bold mx-3 activity-act" style="width: auto;">
+            {{ datos.actividad }}
+          </div>
+        </div>
+        <div class="row">
+          <small class="mb  -2">DESCRIPCIÓN</small>
+          <p class="fst-italic fw-bold">{{ datos.descripcion }}</p>
+        </div>
+      </div>
+      <div class="d-flex justify-content-between">
+        <button class="btn btn-cancel text-white fw-bold rounded-4" type="button" @click="$emit('cancel')" style="width: 38%;">
+          <i class="bi bi-x-circle"></i>
+          Cancelar
+        </button>
+        <button class="btn btn-submit text-white fw-bold rounded-4" type="submit" style="width: 60%;">
+          <i class="bi bi-floppy"></i>
+          Eliminar
+        </button>
+      </div>
+    </div>
+  </form>
 
-
+</div>
 </template>
 
 <script>
@@ -126,132 +147,34 @@ export default {
 
 </script>
 
-<style scoped>
-.icono_bg {
-    background: rgba( 255, 0, 0, 0.3);
+<style>
+.btn-submit{
+  background: linear-gradient(90deg, rgb(105, 28, 32), rgb(111, 114, 113)); 
+  height: 50px;
 }
 
-.text-gob {
-    background: rgb(221, 201, 163);
-}
-.bg-gob {
-    background-color: rgb(118, 19, 59);
+.btn-cancel {
+  background: linear-gradient(90deg, rgb(16, 49, 43), rgb(111, 114, 113)); 
 }
 
-.text-pass {
-    color: rgb(118, 19, 59); 
-}
-
-.edit-form-container {
+/* Card de actividad moderna */
+.activity-card {
+  border: 2px solid rgba(188, 149, 92, 0.2);
+  border-radius: 16px;
+  overflow: hidden;
   background: #ffffff;
-  border-radius: 10px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e9ecef;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease;
 }
 
-.form-section {
-  background: #f8f9fa;
-  padding: 20px;
-  border-radius: 8px;
-  margin-bottom: 20px;
+.activity-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
 }
 
-.form-label {
-  font-weight: 500;
-  color: #2a5298;
-  margin-bottom: 8px;
-  display: block;
-}
-
-.form-control {
-  border: 1px solid #dee2e6;
-  border-radius: 5px;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.form-control:focus {
-  border-color: #60a5fa;
-  box-shadow: 0 0 5px rgba(96, 165, 250, 0.5);
-}
-
-.btn-primary {
-  background-color: #2a5298;
-  border-color: #2a5298;
-}
-
-.btn-primary:hover {
-  background-color: #1e3c72;
-  border-color: #1e3c72;
-}
-
-.btn-secondary {
-  background-color: #6c757d;
-  border-color: #6c757d;
-}
-
-.btn-secondary:hover {
-  background-color: #5a6268;
-  border-color: #5a6268;
-}
-
-.invalid-feedback {
-  font-size: 0.875rem;
-  color: #dc3545;
-}
-
-.card.bg-secondary-subtle {
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-}
-
-.card-body h6 {
-  color: #2a5298;
-  font-weight: 600;
-  margin-bottom: 5px;
-}
-
-.card-body p {
-  margin-bottom: 10px;
-  color: #333;
-}
-
-
-.priority-option {
-  height: 2.5rem;
-  width: 100%;
-  border: 1px solid #dee2e6;
-  border-radius: 0.375rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.priority-option label {
-  cursor: pointer;
-  margin-bottom: 0;
-}
-
-.priority-high {
-  background-color: rgba(220, 53, 69, 0.1);
-  border-color: rgba(220, 53, 69, 0.3);
-  color: #dc3545;
-}
-
-.priority-medium {
-  background-color: rgba(255, 193, 7, 0.1);
-  border-color: rgba(255, 193, 7, 0.3);
-  color: #ffc107;
-}
-
-.priority-low {
-  background-color: rgba(25, 135, 84, 0.1);
-  border-color: rgba(25, 135, 84, 0.3);
-  color: #198754;
-}
-
-.priority-option:hover {
-  background-color: #f8f9fa;
+.activity-act {
+  border: 2px solid rgba(105, 28, 32, 0.2);
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(105, 28, 32, 0.2);
 }
 </style>
