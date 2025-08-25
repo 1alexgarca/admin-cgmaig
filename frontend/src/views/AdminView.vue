@@ -66,7 +66,7 @@
 
     <div class="row g-3">
       <!-- SECCIÓN HORAS Y ASISTENCIAS -->
-      <div class="col-12 col-lg-6" style="height: auto;">
+      <div class="col-12 col-lg-6 border-0" style="height: auto;">
         <div class="card rounded-4 shadow-sm h-100">
           <div class="card-body">
             <!-- Header con controles -->
