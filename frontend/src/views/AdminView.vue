@@ -522,7 +522,7 @@ export default {
 
         return fecha >= start && fecha <= end
       })
-      return diariasSemana.reduce((total, d) => total + (d.horas_totales || 0), 0)
+      return diariasSemana.reduce((total, d) => total + Number(d.horas_totales || 0), 0).toFixed(2)
 
       // if (!this.horasData.semanales?.length) return 0;
       // const currentWeek = this.horasData.semanales[this.horasData.semanales.length - 1];

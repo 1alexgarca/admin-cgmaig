@@ -1,6 +1,6 @@
 <template>
   <div v-if="show" class="modal-overlay">
-    <div class="modal-content rounded-5">
+    <div class="modal-content rounded-5 m-4">
       <button class="close-btn" @click="$emit('close')">
         <i class="bi bi-x"></i>
       </button>

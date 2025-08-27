@@ -58,7 +58,7 @@ export default {
     padding: 2rem;
     border-radius: 8px;
     width: 100%;
-    max-width: 700px;
+    max-width: 850px;
     position: relative;
 }
 

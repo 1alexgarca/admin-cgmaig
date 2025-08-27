@@ -567,7 +567,8 @@ app.put('/api/project/:id', async (req, res) => {
 // -------------------------- GESTIÓN DE ACTIVIDADES ---------------------------- //
 
 // Obtener todas las actividades (con nombre de usuario y proyecto)
-app.get('/api/tasks', async (req, res) => {
+app.get('/api/tasks/:idAdmin', async (req, res) => {
+  const { idAdmin } = req.params
   try {
     const [task] = await pool.query(`
       SELECT
@@ -581,14 +582,15 @@ app.get('/api/tasks', async (req, res) => {
         a.actividad,
         a.avance,
         a.usuario_creador,
+        a.fecha_creacion AS creation_raw,
         DATE_FORMAT(a.fecha_creacion, "%d/%m/%Y") AS creation,
         a.prioridad,
         DATE_FORMAT(fecha_limite, "%d/%m/%Y") AS limited
       FROM actividades a
       INNER JOIN usuarios u ON a.usuario_asignado = u.id_user
       INNER JOIN proyectos p ON a.proyecto = p.id_proyecto
-
-    `)
+      WHERE u.usuario_creador = ? AND a.usuario_asignado != ?
+    `, [idAdmin, idAdmin])
     res.json(task)
   } catch (error) {
     console.error('Error fetching tasks:', error.message)

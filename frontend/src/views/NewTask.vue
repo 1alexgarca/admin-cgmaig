@@ -1,5 +1,6 @@
 <template>
     <div class="content-view">
+        <!-- TARJETAS SUPERIORES -->
         <div class="row g-4 mb-4">
             <!-- Card 1: Total Usuarios -->
             <div class="col-12 col-md-6 col-lg-4">
@@ -63,7 +64,7 @@
                             <h6 class="card-subtitle mb-2 text-muted">Vencidas</h6>
                             <h3 class="mb-0">{{ vencidas }}</h3>
                             <small class="text-danger">
-                            <i class="bi bi-clock-fill"></i> tareas vencidas sin terminar
+                            <i class="bi bi-clock-fill"></i> Tareas vencidas sin terminar
                             </small>
                         </div>
                         <div class="icon-wrapper bg-warning-light">
@@ -75,7 +76,8 @@
             </div>
         </div>
 
-        <div class="d-flex justify-content-center mb-5">
+        <!-- BUSCADOR -->
+        <div class="d-flex justify-content-center mb-4">
             <div class="col-12 col-lg-6">
                 <div class="input-group position-relative">
                     <i class="bi bi-search text-dark-subtle search-icon"></i>
@@ -89,67 +91,86 @@
             </div>
         </div>
 
-
-        <div class="">
-            <div class="table-responsive">
-                <table class="table table-striped border rounded-4 table-sm">
-                    <thead class="small"> 
-                        <tr class="fw-medium">
-                            <th scope="col" class="w-15">Asignado</th>
-                            <th scope="col" class="w-20">Proyecto</th>
-                            <th scope="col" class="w-20">Actividad</th>
-                            <th scope="col" class="w-20">Descripción</th>
-                            <th scope="col" class="w-5 text-center">Horas</th>
-                            <th scope="col" class="w-5 text-center">Avance</th>
-                            <th scope="col" class="w-10">Registro</th>
-                            <th scope="col" class="w-10">Finalización</th>
-                            <th scope="col" class="w-5">Prioridad</th>
-                            <th scope="col" class="w-10">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody class="small"> <!-- Texto más pequeño en contenido -->
-                        <tr v-for="task in paginatedTasks" :key="task.id_activities" :class="{'table-danger': isVencida(task)}">
-                            <td><i class="bi bi-person-circle me-1"></i>{{ task.nombre_asignado }} {{ task.paterno_asignado }} {{ task.materno_asignado }}</td> 
-                            <td class="text-truncate" style="max-width: 190px;">{{ task.proyecto }}</td> 
-                            <td class="text-truncate" style="max-width: 190px;">{{ task.actividad }}</td> 
-                            <td class="text-truncate" style="max-width: 190px;">{{ task.descripcion }}</td> 
-                            <td class="text-center">{{ task.horas_trabajadas }}</td> 
-                            <td class="text-center" style="max-width: 190px;">
-                                <div class="progress" style="height: 20px; max-width: 170px;">
-                                    <div class="progress-bar bg-success text-center" role="progressbar" :style="{ width: task.avance + '%' }" aria-valuenow="50" aria-valuemin="50" aria-valuemax="100">{{ task.avance }}</div>
-                                </div>
-                            </td> 
-                            <td>{{ task.creation }}</td> 
-                            <td>
-                                <i v-if="isVencida(task)"
-                                    class="bi bi-exclamation-triangle-fill text-danger me-1"
-                                    title="Tarea vencida"
-                                ></i>
-                                {{ task.limited }}
-                            </td> 
-                            <td>
-                                <span style="height: 20px; width: 60px;" class="badge"
-                                :class="{
-                                    'bg-danger': task.prioridad === 'alta',
-                                    'bg-warning': task.prioridad === 'media',
-                                    'bg-success': task.prioridad === 'baja'
-                                }"
-                                >
-                                    {{ task.prioridad }}
-                                </span>
-                            </td> 
-                            <td>
-                                <button @click="editTask(task)" type="button" class="btn btn-sm btn-outline-info me-1"><i class="bi bi-pencil-square"></i></button> 
-                                <button @click="deleteTask(task)" type="button" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                            </td> 
-                        </tr>
-                         <tr v-if="tasks.length === 0">
-                            <td colspan="10" class="text-center">No hay registros</td> 
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
+        <div class="table-responsive">
+            <table class="table table-striped border rounded-4 table-sm">
+                <thead>
+                    <tr>
+                        <th colspan="6">
+                            <h6 class="fw-bold">
+                                {{ weekTitle }}
+                            </h6>
+                        </th>
+                        <th colspan="4">
+                            <div class="d-flex justify-content-around align-items-center p-1">
+                                <select class="form-select form-select-sm" v-model="selectedDayStart">
+                                    <option v-for="day in daysInMonth" :key="day" :value="day">{{ day }}</option>
+                                </select>
+                                <i class="bi bi-arrow-right-circle ps-2 pe-2"></i>
+                                <select class="form-select form-select-sm" v-model="selectedDayEnd">
+                                   <option v-for="day in daysInMonth" :key="day" :value="day">{{ day }}</option>
+                                </select>
+                                <select class="form-select form-select-sm" v-model="selectedMonth">
+                                    <option v-for="(month, index) in months" :key="index" :value="index + 1">{{ month }}</option>
+                                </select>
+                            </div>
+                        </th>
+                    </tr>
+                </thead>
+                <thead class="small"> 
+                    <tr class="fw-medium">
+                        <th scope="col" class="w-15">Asignado</th>
+                        <th scope="col" class="w-20">Proyecto</th>
+                        <th scope="col" class="w-20">Actividad</th>
+                        <th scope="col" class="w-20">Descripción</th>
+                        <th scope="col" class="w-5 text-center">Horas</th>
+                        <th scope="col" class="w-5 text-center">Avance</th>
+                        <th scope="col" class="w-10">Registro</th>
+                        <th scope="col" class="w-10">Finalización</th>
+                        <th scope="col" class="w-5">Prioridad</th>
+                        <th scope="col" class="w-10">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="small"> <!-- Texto más pequeño en contenido -->
+                    <tr v-for="task in paginatedFilteredTasks" :key="task.id_activities" :class="{'table-danger': isVencida(task)}">
+                        <td><i class="bi bi-person-circle me-1"></i>{{ task.nombre_asignado }} {{ task.paterno_asignado }} {{ task.materno_asignado }}</td> 
+                        <td class="text-truncate" style="max-width: 190px;">{{ task.proyecto }}</td> 
+                        <td class="text-truncate" style="max-width: 190px;">{{ task.actividad }}</td> 
+                        <td class="text-truncate" style="max-width: 190px;">{{ task.descripcion }}</td> 
+                        <td class="text-center">{{ task.horas_trabajadas }}</td> 
+                        <td class="text-center" style="max-width: 190px;">
+                            <div class="progress" style="height: 20px; max-width: 170px;">
+                                <div class="progress-bar bg-success text-center" role="progressbar" :style="{ width: task.avance + '%' }" aria-valuenow="50" aria-valuemin="50" aria-valuemax="100">{{ task.avance }}</div>
+                            </div>
+                        </td> 
+                        <td>{{ task.creation }}</td> 
+                        <td>
+                            <i v-if="isVencida(task)"
+                                class="bi bi-exclamation-triangle-fill text-danger me-1"
+                                title="Tarea vencida"
+                            ></i>
+                            {{ task.limited }}
+                        </td> 
+                        <td>
+                            <span style="height: 20px; width: 60px;" class="badge"
+                            :class="{
+                                'bg-danger': task.prioridad === 'alta',
+                                'bg-warning': task.prioridad === 'media',
+                                'bg-success': task.prioridad === 'baja'
+                            }"
+                            >
+                                {{ task.prioridad }}
+                            </span>
+                        </td> 
+                        <td>
+                            <button @click="editTask(task)" type="button" class="btn btn-sm btn-outline-info me-1"><i class="bi bi-pencil-square"></i></button> 
+                            <button @click="deleteTask(task)" type="button" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </td> 
+                    </tr>
+                     <tr v-if="tasks.length === 0">
+                        <td colspan="10" class="text-center">No hay registros</td> 
+                    </tr>
+                </tbody>
+            </table>
             <div class="d-flex justify-content-center mt-4">
                 <ul class="pagination">
                     <li class="page-item" :class="{ disabled: currentPage === 1 }">
@@ -203,10 +224,24 @@
 import TaskModal from '../components/TaskModal.vue';
 import TaskPModal from '@/components/TaskPModal.vue';
 import TaskDModal from '@/components/TaskDModal.vue';
+import dayjs from 'dayjs';
+import 'dayjs/locale/es'
+import isoWeek from 'dayjs/plugin/isoWeek'
+import isoBetween from 'dayjs/plugin/isBetween'
+import customParseFormat from 'dayjs/plugin/customParseFormat'
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter'
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore'
+
+dayjs.extend(isoWeek)
+dayjs.extend(isoBetween)
+dayjs.extend(customParseFormat)
+dayjs.locale('es')
+dayjs.extend(isSameOrAfter)
+dayjs.extend(isSameOrBefore)
 
 const user = JSON.parse(localStorage.getItem('user'))
-const usuario_creador = user?.id
-// console.log('Usuario creador:', usuario_creador)
+const idUser = user?.id
+// console.log('Usuario creador:', idUser)
 
 export default {
     name: 'Assignment',
@@ -228,7 +263,17 @@ export default {
             showDetails: false,
             searchQuery: '',
             currentPage: 1,
-            pageSize: 10
+            pageSize: 10,
+            selectedDayStart: null,
+            selectedDayEnd: null,
+            selectedMonth: null,
+            selectedYear: null,
+            daysInMonth: [],
+            months: [
+                "Ene", "Feb", "Mar", "Abr", "May", "Jun", 
+                "Jul", "Ago", "Sep", "Oct", "Nov", "Dic" 
+            ],
+            years: [],
         };
     },
     computed:{
@@ -296,10 +341,82 @@ export default {
             const end = start + this.pageSize
             return this.tasks.slice(start, end)
         },
+        filteredByWeekAndDate() {
+            let tasksFiltered = []
+
+            try {
+                // Si hay inputs seleccionados, filtramos por rango de fechas
+                if (this.selectedDayStart && this.selectedDayEnd && this.selectedMonth && this.selectedYear) {
+                    const startDate = dayjs(`${this.selectedYear}-${String(this.selectedMonth).padStart(2, '0')}-${String(this.selectedDayStart).padStart(2, '0')}`)
+                    const endDate = dayjs(`${this.selectedYear}-${String(this.selectedMonth).padStart(2, '0')}-${String(this.selectedDayEnd).padStart(2, '0')}`)
+
+                    tasksFiltered = this.tasks.filter(task => {
+                        try {
+                            const taskDate = dayjs(task.creation_raw)
+                            if (!taskDate.isValid()) throw new Error('Fecha inválida')
+                            return taskDate.isSameOrAfter(startDate) && taskDate.isSameOrBefore(endDate)
+                        } catch (error) {
+                            console.error('Error filtrando tarea:', task, error)
+                            return false
+                        }
+                    })
+                } else {
+                    // Si no hay inputs, filtramos por semana actual
+                    const today = dayjs()
+                    const startWeek = today.startOf('isoWeek')
+                    const endWeek = today.endOf('isoWeek')
+
+                    tasksFiltered = this.tasks.filter(task => {
+                        try {
+                            const taskDate = dayjs(task.creation_raw)
+                            if (!taskDate.isValid()) throw new Error('Fecha inválida')
+                            return taskDate.isAfter(startWeek) && taskDate.isBefore(endWeek)
+                        } catch (error) {
+                            console.error('Error filtrando tarea:', task, error)
+                            return false
+                        }
+                    })
+                }
+
+                console.log('Tareas filtradas:', tasksFiltered.length)
+                return tasksFiltered
+
+            } catch (error) {
+                console.error('Error en filteredByWeekAndDate:', error)
+                return []
+            }
+        },
+        paginatedFilteredTasks() {
+            const start = (this.currentPage -1) * this.pageSize
+            const end = start + this.pageSize
+            return this.filteredByWeekAndDate.slice(start, end)
+        },
         totalPages() {
-            return Math.ceil(this.tasks.length / this.pageSize)
-        }
+            return Math.ceil(this.filteredByWeekAndDate.length / this.pageSize)
+        },
+        weekTitle() {
+            const monthNames = [
+                "enero", "febrero", "marzo", "abril", "mayo", "junio",
+                "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+                ]
+
+                // Caso 1: rango seleccionado
+                if (this.selectedDayStart && this.selectedDayEnd && this.selectedMonth && this.selectedYear) {
+                const startDate = dayjs(`${this.selectedYear}-${String(this.selectedMonth).padStart(2, '0')}-${String(this.selectedDayStart).padStart(2, '0')}`)
+                const endDate = dayjs(`${this.selectedYear}-${String(this.selectedMonth).padStart(2, '0')}-${String(this.selectedDayEnd).padStart(2, '0')}`)
+
+                return `Actividades de la semana del ${startDate.date()} al ${endDate.date()} de ${monthNames[endDate.month()]} ${endDate.year()}`
+                }
+
+                // Caso 2: semana actual
+                const today = dayjs()
+                const startOfWeek = today.startOf('isoWeek')
+                const endOfWeek = today.endOf('isoWeek')
+
+                return `Actividades de la semana del ${startOfWeek.date()} al ${endOfWeek.date()} de ${monthNames[endOfWeek.month()]} ${endOfWeek.year()}`
+            }
     },
+
     methods: {
         viewDetails(task) {
             this.selectedTask = task,
@@ -311,18 +428,27 @@ export default {
         },
         async loadTask() {
             try {
-                const res = await fetch('http://localhost:4000/api/tasks')
+                const res = await fetch(`http://localhost:4000/api/tasks/${idUser}`)
                 if (!res.ok) throw new Error('Error al obtener usuarios')
                 this.tasks = await res.json()
                 this.proximasVencer()
+                // this.filterThisWeek()
             } catch (error) {
                 console.error('Error al cargar tareas:', error.message)
             }
         },
+        // filterThisWeek() {
+        //     const start = dayjs().startOf('isoWeek')
+        //     const end = dayjs().endOf('isoWeek')
+
+        //     this.tasks = this.tasks.filter(t => {
+        //         const fecha = dayjs(t.creation_raw)
+        //         return fecha.isAfter(start) && fecha.isBefore(end)
+        //     })
+        // },
         Asignar() {
-            // Aquí puedes manejar la lógica para asignar una nueva tarea
             console.log('Asignar nueva tarea');
-            this.showModal = false; // Cerrar el modal después de asignar
+            this.showModal = false;
         },
         TaskAdd(newTask) {
             if (newTask && newTask.name) {
@@ -333,7 +459,7 @@ export default {
         },
         proximasVencer(){
             this.vencenHoy = this.tasks.filter(task => task.limited === this.today).length;
-            console.log('Tareas que vencen hoy:', this.vencenHoy);
+            // console.log('Tareas que vencen hoy:', this.vencenHoy);
         },
         editTask(task) {
             this.selectedTask = {
@@ -402,6 +528,11 @@ export default {
             hoy.setHours(0, 0, 0, 0)
 
             return fechaLim.getTime() < hoy.getTime() && task.avance < 100
+        },
+        loadDaysInMonth() {
+            const days = dayjs(`${this.selectedYear}-${this.selectedMonth}-01`).daysInMonth()
+            this.daysInMonth = Array.from({ length: days }, (_, i) => i + 1)
+
         }
     },
     mounted() {
@@ -412,10 +543,34 @@ export default {
                 row.classList.toggle('expanded');
             })
         })
-    },
 
+        const today = dayjs()
+        const currentYear = today.year()
+        this.years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i)
+
+        this.selectedYear = currentYear
+        this.selectedMonth = today.month() + 1
+        this.loadDaysInMonth()
+        this.selectedDay = today.date()
+    },
     created() {
         this.loadTask()
+    },
+    watch: {
+        selectedMonth() {
+            this.loadDaysInMonth()
+            if(this.selectedDayStart > this.daysInMonth.length) this.selectedDayStart = this.daysInMonth.length
+            if(this.selectedDayEnd > this.daysInMonth.length) this.selectedDayEnd = this.daysInMonth.length
+        },
+        selectedYear() {
+            this.loadDaysInMonth()
+        },
+        selectedDayStart() {
+            this.currentPage = 1
+        },
+        selectedDayEnd() {
+            this.currentPage = 1
+        }
     }
     
 };
