@@ -38,17 +38,13 @@
                 <div class="card mb-3 border-0 shadow bg-success rounded-4 bg-opacity-10">
                     <div class="card-body">
                         <div class="d-flex justify-content-between">
-                            <h5 class="card-title fw-bold">Datos semanales</h5>
-                            <button 
-                                type="button"
-                                class="btn rounded-circle" 
-                                style="background: #5CE65C; width: 50px; height: 50px;"
-                                @click="descargarPDF"    
-                            >
-                                <i class="bi bi-download text-white fs-4"></i>
-                            </button>
+                            <h5 class="card-title fw-bold">Horas registradas</h5>
+                            <div class="rounded-circle d-flex justify-content-center align-items-center"
+                                style="width: 50px; height: 50px; background-color: #5CE65C;">
+                                <div class="fs-3 fw-bold text-white">{{ horasSemana }}</div>
+                            </div>
                         </div>
-                        <h3 class="fw-bold" style="color: #5CE65C;">Descarga estadisticas</h3>
+                        <h3 class="fw-bold" style="color: #5CE65C;">{{ horaDia }} hrs en el día</h3>
                     </div>
                 </div>
             </div>
@@ -520,16 +516,6 @@ export default {
                 console.error('Error al cargar datos:', error)
             }
         },
-        async descargarPDF() {
-            const response = await fetch(`http://localhost:4000/api/reporte-semanal/${userId}`)
-            const blob = await response.blob()
-            const url = window.URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = 'Reporte_semanal.pdf'
-            a.click()
-            window.URL.revokeObjectURL(url)
-        },
         loadDaysInMonth() {
             const days = dayjs(`${this.selectedYear}-${this.selectedMonth}-01`).daysInMonth()
             this.daysInMonth = Array.from({ length: days }, (_, i) => i + 1)
@@ -608,6 +594,24 @@ export default {
             const endOfWeek = today.endOf('isoWeek')
 
             return `Actividades del ${startOfWeek.date()} al ${endOfWeek.date()} de ${monthNames[endOfWeek.month()]} ${endOfWeek.year()}`
+        },
+        horaDia() {
+            const hoy = dayjs().format('YYYY-MM-DD')
+            return this.tasks.reduce((total, task) => {
+                const fecha = dayjs(task.fecha_creacion).format('YYYY-MM-DD')
+                return fecha === hoy ? total + (parseFloat(task.horas_trabajadas) || 0) : total
+            }, 0)
+        },
+        horasSemana() {
+            const inicioSemana = dayjs().startOf('isoWeek')
+            const finSemana = dayjs().endOf('isoWeek')
+            return this.tasks.reduce((total, task) => {
+                const fecha = dayjs(task.fecha_creacion)
+                if (fecha.isSameOrAfter(inicioSemana) && fecha.isSameOrBefore(finSemana)) {
+                    return total + (parseFloat(task.horas_trabajadas) || 0)
+                }
+                return total
+            }, 0)
         }
     
     },
