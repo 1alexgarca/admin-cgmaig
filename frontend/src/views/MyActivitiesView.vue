@@ -56,41 +56,92 @@
 
         <div class="d-flex">
             <div style="width: 100%; padding: 1rem;" class="rounded-4 shadow border">
-                <table class="table">
+                <div class="d-flex justify-content-between mb-2">
+                    <h6 class="fw-bold">
+                        {{ weekTitle }}
+                    </h6>
+                    <div class="d-flex align-items-center">
+                        <select class="form-select form-select-sm" v-model="selectedDayStart">
+                            <option v-for="day in daysInMonth" :key="day" :value="day">{{ day }}</option>
+                        </select>
+                        <i class="bi bi-arrow-right-circle ps-2 pe-2"></i>
+                        <select class="form-select form-select-sm" v-model="selectedDayEnd">
+                            <option v-for="day in daysInMonth" :key="day" :value="day">{{ day }}</option>
+                        </select>
+                        <select class="form-select form-select-sm" v-model="selectedMonth">
+                            <option v-for="(month, index) in months" :key="index" :value="index + 1">{{ month }}</option>
+                        </select>
+                    </div>
+                </div>
+                <table class="table table-striped border table-sm">
                     <thead>
                         <tr>
-                            <th>Estado</th>
-                            <th>Actividad</th>
-                            <th>Descripción</th>
-                            <th>Prioridad</th>
-                            <th>Avance</th>
-                            <th>Hrs Trabajadas</th>
+                            <th>
+                                <small>Estado</small>
+                            </th>
+                            <th>
+                                <small>Actividad</small>
+                            </th>
+                            <th>
+                                <small>Descripción</small>
+                            </th>
+                            <th>
+                                <small>Prioridad</small>
+                            </th>
+                            <th>
+                                <small>
+                                    Avance
+                                </small>
+                            </th>
+                            <th>
+                                Hrs Trabajadas
+                            </th>
                         </tr>
                     </thead>
                     <tbody class="small">
                         <tr 
-                            v-for="task in paginatedTasks" 
+                            v-for="task in paginatedFilteredTasks" 
                             :key="task.id_activities" 
                             @click="openActivity(task)"
                             style="cursor: pointer;"
                         >
                             <td class="text-center">
-                                <i v-if="task.avance === 100" class="bi bi-check2-circle text-success fs-4" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Completado"></i>
-                                <i v-else="task.avance < 100" class="bi bi-hourglass-split text-warning fs-4 spin-hourglass" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="En proceso"></i>
+                                <small>
+                                    <i v-if="task.avance === 100" class="bi bi-check-circle-fill text-success fs-5" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Completado"></i>
+                                    <i v-else="task.avance < 100" class="bi bi-hourglass-split text-warning fs-5 spin-hourglass" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="En proceso"></i>
+                                </small>
                             </td>
-                            <td>{{ task.actividad }}</td>
-                            <td>{{ task.descripcion }}</td>
-                            <td>
+                            <td class="text-truncate" style="max-width: 100px;">
+                                <small>
+                                    {{ task.actividad }}
+                                </small>
+                            </td>
+                            <td class="text-truncate" style="max-width: 160px;">
+                                <small>
+                                    {{ task.descripcion }}
+                                </small>
+                            </td>
+                            <td class="text-center pt-2">
                                 <span 
                                   :class="[badgePriority(task.prioridad)]"
-                                  class="badge"
-                                  style="height: 20px; width: 60px;"
+                                  class="badge d-flex justify-content-center align-items-center"
+                                  style="height: 15px; width: 50px;"
                                 >
-                                  {{ task.prioridad }}
+                                <small>
+                                    {{ task.prioridad }}
+                                </small>
                                 </span>                                
                             </td>
-                            <td>{{ task.avance }}%</td>
-                            <td>{{ task.horas_trabajadas }} hrs</td>
+                            <td class="text-center">
+                                <small>
+                                    {{ task.avance }}%
+                                </small>
+                            </td>
+                            <td class="text-center">
+                                <small>
+                                    {{ task.horas_trabajadas }} hrs
+                                </small>
+                            </td>
                         </tr>
                         <tr v-if="paginatedTasks.length === 0">
                             <td colspan="6" class="text-center">No hay registros</td>
@@ -242,6 +293,22 @@ import * as bootstrap from 'bootstrap'
 import DtosModal from '@/components/DtosModal.vue';
 import { ref } from 'vue'
 import { Tooltip } from 'bootstrap';
+import dayjs from 'dayjs';
+import 'dayjs/locale/es'
+import isoWeek from 'dayjs/plugin/isoWeek'
+import isoBetween from 'dayjs/plugin/isBetween'
+import customParseFormat from 'dayjs/plugin/customParseFormat'
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter'
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore'
+
+dayjs.extend(isoWeek)
+dayjs.extend(isoBetween)
+dayjs.extend(customParseFormat)
+dayjs.locale('es')
+dayjs.extend(isSameOrAfter)
+dayjs.extend(isSameOrBefore)
+
+
 
 
 const currentPage = ref(1)
@@ -278,7 +345,17 @@ export default {
                 tareasCompletadas: 0,
                 enProgreso: 0,
                 tareasTotales: 0
-            }
+            },
+            selectedDayStart: null,
+            selectedDayEnd: null,
+            selectedMonth: null,
+            selectedYear: null,
+            daysInMonth: [],
+            months: [
+                "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+                "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"
+            ],
+            years: []
 
         }
     },
@@ -303,6 +380,14 @@ export default {
         }
         this.initTooltips()
         this.cargarEstadisticas()
+        const today = dayjs()
+        const currentYear = today.year()
+        this.years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i)
+
+        this.selectedYear = currentYear
+        this.selectedMonth = today.month() + 1
+        this.loadDaysInMonth()
+        this.selectedDay = today.date()
     },
     updated() {
         this.initTooltips()
@@ -444,6 +529,10 @@ export default {
             a.download = 'Reporte_semanal.pdf'
             a.click()
             window.URL.revokeObjectURL(url)
+        },
+        loadDaysInMonth() {
+            const days = dayjs(`${this.selectedYear}-${this.selectedMonth}-01`).daysInMonth()
+            this.daysInMonth = Array.from({ length: days }, (_, i) => i + 1)
         }
      },
     computed: {
@@ -452,9 +541,75 @@ export default {
             const end = start + this.pageSize
             return this.tasks.slice(start, end)
         },  
+        filteredByWeekAndDate() {
+            let taskFiltered = []
+
+            try{
+                if (this.selectedDayStart && this.selectedDayEnd && this.selectedMonth && this.selectedYear) {
+                    const startDate = dayjs(`${this.selectedYear}-${String(this.selectedMonth).padStart(2, '0')}-${String(this.selectedDayStart).padStart(2, '0')}`)
+                    const endDate = dayjs(`${this.selectedYear}-${String(this.selectedMonth).padStart(2, '0')}-${String(this.selectedDayEnd).padStart(2, '0')}`)
+
+                    taskFiltered = this.tasks.filter(task => {
+                        try {
+                            const taskDate = dayjs(task.fecha_creacion)
+                            if (!taskDate.isValid()) throw new Error('Fecha inválida') 
+                            return taskDate.isSameOrAfter(startDate) && taskDate.isSameOrBefore(endDate)
+                        } catch (error) {
+                            console.error('Error filtrando tarea:', task, error)
+                            return false
+                        }
+                    })
+                } else {
+                    const today = dayjs()
+                    const startWeek = today.startOf('isoWeek')
+                    const endWeek = today.endOf('isoWeek')
+
+                    taskFiltered = this.tasks.filter(task => {
+                        try {
+                            const taskDate = dayjs(task.fecha_creacion)
+                            if (!taskDate.isValid()) throw new Error('Fecha inválida')
+                            return taskDate.isSameOrAfter(startWeek) && taskDate.isSameOrBefore(endWeek)
+                        } catch (error) {
+
+                            console.error('Error filtrando actividades:', task, error)
+                            return false
+                        }
+                    })
+                }
+                console.log('Tareas filtradas:', taskFiltered.length)
+                return taskFiltered
+            } catch (error) {
+                console.error('Error en filteredByWeekAndDate:', error)
+                return []
+            }
+        },
+        paginatedFilteredTasks() {
+            const start = (this.currentPage -1) * this.pageSize
+            const end = start + this.pageSize
+            return this.filteredByWeekAndDate.slice(start, end)
+        },
         totalPages() {
             return Math.ceil(this.tasks.length / this.pageSize)
+        },
+        weekTitle() {
+            const monthNames = [
+                "enero", "febrero", "marzo", "abril", "mayo", "junio",
+                "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+            ]
+
+            if (this.selectedDayStart && this.selectedDayEnd && this.selectedMonth && this.selectedYear) {
+                const startDate = dayjs(`${this.selectedYear}-${String(this.selectedMonth).padStart(2, '0')}-${String(this.selectedDayStart).padStart(2, '0')}`)
+                const endDate = dayjs(`${this.selectedYear}-${String(this.selectedMonth).padStart(2, '0')}-${String(this.selectedDayEnd).padStart(2, '0')}`)
+                
+                return `Actividade del ${startDate.date()} al ${endDate.date()} de ${monthNames[endDate.month()]} ${endDate.year()}`
+            }
+            const today = dayjs()
+            const startOfWeek = today.startOf('isoWeek')
+            const endOfWeek = today.endOf('isoWeek')
+
+            return `Actividades del ${startOfWeek.date()} al ${endOfWeek.date()} de ${monthNames[endOfWeek.month()]} ${endOfWeek.year()}`
         }
+    
     },
     watch: {
         refreshNeeded(nuevoValor) {
@@ -462,6 +617,20 @@ export default {
                 this.loadActivities()
                 this.refreshNeeded = false
             }
+        },
+        selectedMonth() {
+            this.loadDaysInMonth()
+            if(this.selectedDayStart > this.daysInMonth.length) this.selectedDayStart = this.daysInMonth.length
+            if(this.selectedDayEnd > this.daysInMonth.length) this.selectedDayEnd = this.daysInMonth.length
+        },
+        selectedYear() {
+            this.loadDaysInMonth()
+        },
+        selectedDayStart() {
+            this.currentPage = 1
+        },
+        selectedDayEnd() {
+            this.currentPage = 1
         }
     }
 }
@@ -469,6 +638,25 @@ export default {
 
 
 <style scoped>
+tr.expanded td.text-truncate {
+    white-space: normal; /* Permite que el texto se ajuste a varias líneas */
+    overflow: visible; /* Asegura que el texto no se corte */
+    max-width: none; /* Permite que el texto ocupe todo el ancho disponible */
+}
+
+tr.expanded .expand-icon {
+    transform: rotate(90deg);
+    transition: transform 0.2s;
+}
+
+tbody tr{
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
 
 /* Tus estilos originales se mantienen igual */
 .priority-option {

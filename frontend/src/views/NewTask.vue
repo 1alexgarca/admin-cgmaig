@@ -264,6 +264,7 @@ export default {
             searchQuery: '',
             currentPage: 1,
             pageSize: 10,
+            
             selectedDayStart: null,
             selectedDayEnd: null,
             selectedMonth: null,
@@ -370,7 +371,7 @@ export default {
                         try {
                             const taskDate = dayjs(task.creation_raw)
                             if (!taskDate.isValid()) throw new Error('Fecha inválida')
-                            return taskDate.isAfter(startWeek) && taskDate.isBefore(endWeek)
+                            return taskDate.isSameOrAfter(startWeek) && taskDate.isSameOrBefore(endWeek)
                         } catch (error) {
                             console.error('Error filtrando tarea:', task, error)
                             return false
@@ -437,15 +438,6 @@ export default {
                 console.error('Error al cargar tareas:', error.message)
             }
         },
-        // filterThisWeek() {
-        //     const start = dayjs().startOf('isoWeek')
-        //     const end = dayjs().endOf('isoWeek')
-
-        //     this.tasks = this.tasks.filter(t => {
-        //         const fecha = dayjs(t.creation_raw)
-        //         return fecha.isAfter(start) && fecha.isBefore(end)
-        //     })
-        // },
         Asignar() {
             console.log('Asignar nueva tarea');
             this.showModal = false;
