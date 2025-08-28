@@ -91,7 +91,7 @@
                 <div class="col-md-6 text-md-end mt-3 mt-md-0">
                     <div class="control-buttons">
                         <button class="btn btn-outline-secondary" @click="showModal = true">
-                            <i class="bi bi-arrow-clockwise me-1"></i>
+                            <i class="bi bi-person-fill-add"></i>
                             Agregar Usuaurio
                         </button>
                     </div>
@@ -154,7 +154,7 @@
                             <tr v-for="user in filterdUsers" :key="user.id_user" class="table-row">
                                 <td class="table-cell">
                                     <div class="user-info">
-                                        <div class="user-avatar">
+                                        <div class="user-avatar bg-primary">
                                             {{ (user.name?.charAt(0) || '') + (user.lastNameP?.charAt(0) || '') }}
                                         </div>
                                         <div class="user-details">
