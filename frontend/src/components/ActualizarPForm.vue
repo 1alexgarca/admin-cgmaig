@@ -200,7 +200,7 @@ export default {
 
 .section-header i {
   font-size: 1.25rem;
-  color: #667eea;
+  color: rgb(188, 149, 92);
 }
 
 .section-header h3 {
@@ -220,7 +220,7 @@ export default {
   border-radius: 12px;
   padding: 1.5rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border-left: 4px solid #667eea;
+  border-left: 4px solid rgb(105, 28, 32);
 }
 
 .info-label {
@@ -234,7 +234,7 @@ export default {
 }
 
 .info-label i {
-  color: #667eea;
+  color: rgb(16, 49, 43w);
 }
 
 .info-value {
@@ -334,7 +334,7 @@ textarea.form-control {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: rgb(105, 28, 32);
   color: white;
 }
 

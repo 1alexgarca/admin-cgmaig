@@ -75,7 +75,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(140deg, rgb(105, 28, 32) 50%, rgb(111, 114, 113) 100%);
   color: white;
 }
 
