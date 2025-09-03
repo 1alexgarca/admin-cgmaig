@@ -92,7 +92,7 @@
                     <div class="control-buttons">
                         <button class="btn btn-outline-secondary" @click="showModal = true">
                             <i class="bi bi-person-fill-add"></i>
-                            Agregar Usuaurio
+                            Agregar Usuario
                         </button>
                     </div>
                 </div>
@@ -109,7 +109,7 @@
                             Lista de Usuarios
                         </h5>
                         <span class="badge bg-primary-subtle text-primary fs-6">
-                            {{ filterdUsers.length }} usuarios encontrados
+                            {{ filteredUsers.length }} usuarios encontrados
                         </span>
                     </div>
                 </div>
@@ -151,7 +151,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="user in filterdUsers" :key="user.id_user" class="table-row">
+                            <tr v-for="user in filteredUsers" :key="user.id_user" class="table-row">
                                 <td class="table-cell">
                                     <div class="user-info">
                                         <div class="user-avatar bg-primary">
@@ -196,7 +196,7 @@
                     </table>
 
                     <!-- Empty State -->
-                    <div v-if="filterdUsers.length === 0" class="empty-state-table">
+                    <div v-if="filteredUsers.length === 0" class="empty-state-table">
                         <div class="empty-content">
                             <div class="empty-icon">
                                 <i class="bi bi-person-x display-1"></i>
@@ -214,11 +214,11 @@
                 </div>
 
                 <!-- Pagination -->
-                <div class="table-footer p-4" v-if="filterdUsers.length > 0">
+                <div class="table-footer p-4" v-if="filteredUsers.length > 0">
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="pagination-info">
                             <span class="text-muted">
-                                Mostrando {{ filterdUsers.length }} de {{ totalUsers }} usuarios
+                                Mostrando {{ filteredUsers.length }} de {{ totalUsers }} usuarios
                             </span>
                         </div>
                         <nav aria-label="Paginación de usuarios">
@@ -295,7 +295,7 @@ export default {
         totalUsers() {
             return this.users.filter(user => user.rol === 'trabajador').length
         },
-        filterdUsers() {
+        filteredUsers() {
             return this.users.filter(user => 
                 user.rol === 'trabajador' &&
                 (this.searchQuery === '' || 
