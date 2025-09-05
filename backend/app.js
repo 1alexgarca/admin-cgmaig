@@ -1,15 +1,18 @@
+import dotenv from 'dotenv'
+import path from 'path'
+
+dotenv.config({ path: path.resolve('./.env') })
+
 import express from 'express';
 import cors from 'cors';
 import pool from './db.js';
 import bcrypt from 'bcrypt';
 import nodemailer from 'nodemailer';
 import multer from 'multer'
-import path from 'path'
 import puppeteer from 'puppeteer';
 import fs from 'fs/promises'
 import cron from 'node-cron'
 import { fileURLToPath } from 'url';
-
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -37,7 +40,6 @@ const storage = multer.diskStorage({
 })
 
 const upload = multer({storage})
-
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -67,7 +69,6 @@ app.get('/', (req, res) => {
   res.send('¡Servidor backend funcionando correctamente!');
 });
 
-
 // ------------------------ AUTENTICACIÓN Y REGISTRO ------------------------ //
 
 // Iniciar sesión como administrador
@@ -75,19 +76,19 @@ app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const [rows] = await pool.query(`
+    const result = await pool.query(`
       SELECT u.*, d.nombre_dependencia
       FROM usuarios u
       LEFT JOIN dependencias d ON u.dependencia_id = d.id_dependencia
-      WHERE u.email = ?`,
+      WHERE u.email = $1`,
         [email]
     );
 
-    if (rows.length === 0) {
+    if (result.rows.length === 0) {
       return res.status(401).json({ error: 'Credenciales incorrectas' });
     }
 
-    const user = rows[0];
+    const user = result.rows[0];
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
@@ -131,17 +132,18 @@ app.post('/api/register', async (req, res) => {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(plainTextPassword, saltRounds);
 
-    const [result] = await pool.query(
-      'INSERT INTO usuarios (nombre, paterno, materno, email, telefono, password_hash, rol) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    const result = await pool.query(
+      'INSERT INTO usuarios (nombre, paterno, materno, email, telefono, password_hash, rol) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id_user',
       [name, lastNameP, lastNameM, email, phoneNumber, hashedPassword, rol]
     );
     
+    const newUser = result.rows[0];
 
-    //Enviar correo electrónico al usuario
+    // Enviar correo electrónico al usuario
     await transporter.sendMail({
       from: '"Gestión de actividades" <dionisio652@gmail.com>',
       to: email,
-      subject: 'Registro exitoso -  Contraseña temporal',
+      subject: 'Registro exitoso - Contraseña temporal',
       html: `
       <h3>Hola ${name} ${lastNameP},</h3>
       <p>Te has registrado exitosamente como <strong>${rol}</strong>.</p>
@@ -151,7 +153,7 @@ app.post('/api/register', async (req, res) => {
     })
 
     res.status(201).json({
-      id_user: result.insertId,
+      id_user: newUser.id_user,
       name,
       lastNameP,
       lastNameM,
@@ -163,7 +165,7 @@ app.post('/api/register', async (req, res) => {
     });
   } catch (error) {
     console.error('Error creando usuario:', error);
-    if (error.code === 'ER_DUP_ENTRY') {
+    if (error.code === '23505') { // Código de violación de restricción única en PostgreSQL
       res.status(409).json({ error: 'El correo ya está registrado' });
     } else {
       res.status(500).json({ error: `Fallo al crear usuario: ${error.message}` });
@@ -184,13 +186,15 @@ app.post('/api/users', async (req, res) => {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(plainTextPassword, saltRounds);
 
-    const [result] = await pool.query(
-      'INSERT INTO usuarios (nombre, paterno, materno, email, telefono, password_hash, usuario_creador) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    const result = await pool.query(
+      'INSERT INTO usuarios (nombre, paterno, materno, email, telefono, password_hash, usuario_creador) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id_user',
       [name, lastNameP, lastNameM, email, phoneNumber, hashedPassword, usuario_creador]
     );
 
+    const newUser = result.rows[0];
+
     res.status(201).json({
-      id_user: result.insertId,
+      id_user: newUser.id_user,
       name,
       lastNameP,
       lastNameM,
@@ -201,7 +205,7 @@ app.post('/api/users', async (req, res) => {
     });
   } catch (error) {
     console.error('Error creando usuario:', error);
-    if (error.code === 'ER_DUP_ENTRY') {
+    if (error.code === '23505') {
       res.status(409).json({ error: 'El correo ya está registrado' });
     } else {
       res.status(500).json({ error: `Fallo al crear usuario: ${error.message}` });
@@ -209,7 +213,7 @@ app.post('/api/users', async (req, res) => {
   }
 });
 
-// Crear administrador (simiar a /users pero pensado para administrador)
+// Crear administrador (similar a /users pero pensado para administrador)
 app.post('/api/admin/login', async (req, res) => {
   const { name, lastNameP, lastNameM, email, phoneNumber, usuario_creador} = req.body;
 
@@ -222,13 +226,15 @@ app.post('/api/admin/login', async (req, res) => {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(plainTextPassword, saltRounds);
 
-    const [result] = await pool.query(
-      'INSERT INTO usuarios (nombre, paterno, materno, email, telefono, password_hash, usuario_creador) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    const result = await pool.query(
+      'INSERT INTO usuarios (nombre, paterno, materno, email, telefono, password_hash, usuario_creador) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id_user',
       [name, lastNameP, lastNameM, email, phoneNumber, hashedPassword, usuario_creador]
     );
 
+    const newUser = result.rows[0];
+
     res.status(201).json({
-      id_user: result.insertId,
+      id_user: newUser.id_user,
       name,
       lastNameP,
       lastNameM,
@@ -239,7 +245,7 @@ app.post('/api/admin/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Error creando usuario:', error);
-    if (error.code === 'ER_DUP_ENTRY') {
+    if (error.code === '23505') {
       res.status(409).json({ error: 'El correo ya está registrado' });
     } else {
       res.status(500).json({ error: `Fallo al crear usuario: ${error.message}` });
@@ -247,21 +253,19 @@ app.post('/api/admin/login', async (req, res) => {
   }
 })
 
-
-
 // ----------------------------- CONSULTA PARA EL DASHBOARD -------------------------------- //
 
-// Consulta para para los cards superiores
+// Consulta para los cards superiores
 app.get('/api/dashboard/estadisticas', async (req, res) => {
   try {
-    const [result] = await pool.query(`
+    const result = await pool.query(`
       SELECT 
         COUNT(CASE WHEN avance = 100 THEN 1 END) AS tareasCompletadas,
         COUNT(CASE WHEN avance > 0 AND avance < 100 THEN 1 END) AS tareasEnProceso,
         COUNT(*) AS totalActividades
       FROM actividades      
     `)
-    res.json(result[0])
+    res.json(result.rows[0])
   } catch (error) {
     console.error('Error al obtener actividades:', error.message)
     res.status(500).json({ error: 'Error al obtener actividades' })
@@ -272,101 +276,60 @@ app.get('/api/dashboard/estadisticas', async (req, res) => {
 app.get('/api/horas/:userId', async (req, res) => {
   const { userId } = req.params;
   try {
-    const [horasDiarias] = await pool.query(`
+    const horasDiarias = await pool.query(`
       SELECT 
         DATE(r.fecha_actualizacion) AS dia,
         SUM(r.horas_trabajadas) AS horas_totales,
-        SUM(CASE WHEN r.es_hora_extra = 1 THEN r.horas_trabajadas ELSE 0 END) AS horas_extra,
+        SUM(CASE WHEN r.es_hora_extra = true THEN r.horas_trabajadas ELSE 0 END) AS horas_extra,
         COUNT(DISTINCT DATE(r.fecha_actualizacion)) AS dias_asistencia,
         CASE WHEN SUM(r.horas_trabajadas) < 8 THEN 1 ELSE 0 END AS incumple_dia
       FROM registro_actividad r
       JOIN actividades a ON r.id_actividad = a.id_activities
-      WHERE a.usuario_asignado = ?
+      WHERE a.usuario_asignado = $1
       GROUP BY dia
       ORDER BY dia ASC
     `, [userId]);
 
-    const [horasSemanales] = await pool.query(`
+    const horasSemanales = await pool.query(`
       SELECT 
-          YEAR(r.fecha_actualizacion) AS anio,
-          WEEK(r.fecha_actualizacion, 1) AS semana,
+          EXTRACT(YEAR FROM r.fecha_actualizacion) AS anio,
+          EXTRACT(WEEK FROM r.fecha_actualizacion) AS semana,
           -- Calcular lunes de la semana
-          DATE_FORMAT(
-              DATE_SUB(r.fecha_actualizacion, INTERVAL (DAYOFWEEK(r.fecha_actualizacion) - 2) DAY),
-              '%d-%m'
+          TO_CHAR(
+              r.fecha_actualizacion - EXTRACT(DOW FROM r.fecha_actualizacion)::integer * INTERVAL '1 day',
+              'DD-MM'
           ) AS inicio_semana,
           -- Calcular viernes de la semana
-          DATE_FORMAT(
-              DATE_ADD(
-                  DATE_SUB(r.fecha_actualizacion, INTERVAL (DAYOFWEEK(r.fecha_actualizacion) - 2) DAY),
-                  INTERVAL 4 DAY
-              ),
-              '%d-%m'
+          TO_CHAR(
+              r.fecha_actualizacion - EXTRACT(DOW FROM r.fecha_actualizacion)::integer * INTERVAL '1 day' + INTERVAL '4 days',
+              'DD-MM'
           ) AS fin_semana,
           SUM(r.horas_trabajadas) AS horas_totales,
-          SUM(CASE WHEN r.es_hora_extra = 1 THEN r.horas_trabajadas ELSE 0 END) AS horas_extra,
+          SUM(CASE WHEN r.es_hora_extra = true THEN r.horas_trabajadas ELSE 0 END) AS horas_extra,
           COUNT(DISTINCT DATE(r.fecha_actualizacion)) AS dias_asistencia,
           CASE WHEN SUM(r.horas_trabajadas) < 40 THEN 1 ELSE 0 END AS incumple_semana,
           ROUND((SUM(r.horas_trabajadas) / 40) * 100, 2) AS porcentaje_meta
       FROM registro_actividad r
       JOIN actividades a ON r.id_actividad = a.id_activities
-      WHERE a.usuario_asignado = ?
+      WHERE a.usuario_asignado = $1
       GROUP BY anio, semana
       ORDER BY anio ASC, semana ASC;
     `, [userId]);
 
-    res.json({ horasDiarias, horasSemanales });
+    res.json({ horasDiarias: horasDiarias.rows, horasSemanales: horasSemanales.rows });
   } catch (error) {
     res.status(500).json({ error: 'Error al cargar horas y asistencias' });
   }
 });
 
-// Horas y asistencias por equipo
-// app.get('/api/horas-equipo/:adminId', async (req, res) => {
-//   const { adminId } = req.params;
-//   try {
-//     const [horasDiarias] = await pool.query(`
-//       SELECT 
-//         DATE(r.fecha_actualizacion) AS dia,
-//         SUM(r.horas_trabajadas) AS horas_totales,
-//         SUM(CASE WHEN r.es_hora_extra = 1 THEN r.horas_trabajadas ELSE 0 END) AS horas_extra
-//       FROM registro_actividad r
-//       JOIN actividades a ON r.id_actividad = a.id_activities
-//       JOIN usuarios u ON a.usuario_asignado = u.id_user
-//       WHERE u.usuario_creador = ?
-//       GROUP BY dia
-//       ORDER BY dia ASC
-//     `, [adminId]);
-
-//     const [horasSemanales] = await pool.query(`
-//       SELECT 
-//         YEAR(r.fecha_actualizacion) AS anio,
-//         WEEK(r.fecha_actualizacion, 1) AS semana,
-//         SUM(r.horas_trabajadas) AS horas_totales,
-//         SUM(CASE WHEN r.es_hora_extra = 1 THEN r.horas_trabajadas ELSE 0 END) AS horas_extra,
-//         ROUND((SUM(r.horas_trabajadas)/(COUNT(DISTINCT u.id_user)*40))*100,2) AS porcentaje_meta
-//       FROM registro_actividad r
-//       JOIN actividades a ON r.id_actividad = a.id_activities
-//       JOIN usuarios u ON a.usuario_asignado = u.id_user
-//       WHERE u.usuario_creador = ?
-//       GROUP BY anio, semana
-//       ORDER BY anio ASC, semana ASC
-//     `, [adminId]);
-
-//     res.json({ horasDiarias, horasSemanales });
-//   } catch (error) {
-//     res.status(500).json({ error: 'Error al cargar horas y asistencias del equipo' });
-//   }
-// });
-
 // Productividad y avance por usuario
 app.get('/api/productividad/:userId', async (req, res) => {
   const { userId } = req.params;
   try {
-    const [summary] = await pool.query(`
+    const summary = await pool.query(`
        SELECT
-          YEAR(a.fecha_creacion) AS anio,
-          WEEK(a.fecha_creacion, 1) AS semana,
+          EXTRACT(YEAR FROM a.fecha_creacion) AS anio,
+          EXTRACT(WEEK FROM a.fecha_creacion) AS semana,
           COUNT(*) AS total_tareas,
           SUM(CASE WHEN a.avance = 100 THEN 1 ELSE 0 END) AS tareas_completadas,
           COUNT(*) - SUM(CASE WHEN a.avance = 100 THEN 1 ELSE 0 END) AS tareas_pendientes,
@@ -379,53 +342,28 @@ app.get('/api/productividad/:userId', async (req, res) => {
           FROM registro_actividad
           GROUP BY id_actividad
       ) ra ON ra.id_actividad = a.id_activities
-      WHERE a.usuario_asignado = ?
+      WHERE a.usuario_asignado = $1
       GROUP BY anio, semana
       ORDER BY anio DESC, semana DESC;
       `, [userId])
 
-    const [weekly] = await pool.query(`
+    const weekly = await pool.query(`
       SELECT 
-        YEAR(r.fecha_actualizacion) AS anio,
-        WEEK(r.fecha_actualizacion, 1) AS semana,
+        EXTRACT(YEAR FROM r.fecha_actualizacion) AS anio,
+        EXTRACT(WEEK FROM r.fecha_actualizacion) AS semana,
         ROUND(AVG(a.avance),2) AS promedio_avance
       FROM actividades a
       JOIN registro_actividad r ON a.id_activities = r.id_actividad
-      WHERE a.usuario_asignado = ?
+      WHERE a.usuario_asignado = $1
       GROUP BY anio, semana
       ORDER BY anio ASC, semana ASC
     `, [userId])
 
-    res.json({ ...summary[0], weekly });
+    res.json({ ...summary.rows[0], weekly: weekly.rows });
   } catch (error) {
     res.status(500).json({ error: 'Error al cargar productividad' });
   }
 });
-
-// Productividad y avance por equipo
-// app.get('/api/productividad-equipo/:adminId', async (req, res) => {
-//   const { adminId } = req.params;
-//   try {
-//     const [data] = await pool.query(`
-//       SELECT 
-//         COUNT(a.id_activities) AS total_tareas,
-//         SUM(CASE WHEN a.avance=100 THEN 1 ELSE 0 END) AS tareas_completadas,
-//         ROUND(AVG(a.avance),2) AS promedio_avance,
-//         SUM(r.horas_trabajadas) AS horas_invertidas
-//       FROM actividades a
-//       JOIN registro_actividad r ON a.id_activities = r.id_actividad
-//       JOIN usuarios u ON a.usuario_asignado = u.id_user
-//       WHERE u.usuario_creador = ?
-//     `, [adminId]);
-
-//     res.json(data[0]);
-//   } catch (error) {
-//     res.status(500).json({ error: 'Error al cargar productividad del equipo' });
-//   }
-// });
-
-
-
 
 // ------------------------- GESTIÓN DE USUARIOS ----------------------------- //
 
@@ -433,7 +371,7 @@ app.get('/api/productividad/:userId', async (req, res) => {
 app.get('/api/users/:usuario_creador', async (req, res) => {
   const { usuario_creador } = req.params;
   try {
-    const [users] = await pool.query(`
+    const users = await pool.query(`
       SELECT 
         id_user AS id_user,
         nombre AS name,
@@ -442,10 +380,10 @@ app.get('/api/users/:usuario_creador', async (req, res) => {
         email,
         telefono AS phoneNumber,
         rol,
-        DATE_FORMAT(fecha_creacion, "%d/%m/%Y") AS fecha_creacion
-      FROM usuarios WHERE usuario_creador = ?
+        TO_CHAR(fecha_creacion, 'DD/MM/YYYY') AS fecha_creacion
+      FROM usuarios WHERE usuario_creador = $1
     `, [usuario_creador]);
-    res.json(users);
+    res.json(users.rows);
   } catch (error) {
     console.error('Error fetching users:', error.message);
     res.status(500).json({ error: 'Error al obtener usuarios' });
@@ -457,13 +395,13 @@ app.get('/api/usuarios/trabajadores/:usuario_creador', async (req, res) => {
   const {usuario_creador} = req.params
 
   try {
-    const [rows] = await pool.query(`
+    const rows = await pool.query(`
       SELECT id_user, nombre, paterno, materno
       FROM usuarios
-      WHERE rol = 'trabajador' AND usuario_creador = ?`,
+      WHERE rol = 'trabajador' AND usuario_creador = $1`,
       [usuario_creador] 
     )
-    res.json(rows);
+    res.json(rows.rows);
   } catch (error) {
     console.error('Error al obtener trabajadores:', error)
     res.status(500).json({ error: 'No se puedo obtener la lista de los trabajadores' });
@@ -474,14 +412,14 @@ app.get('/api/usuarios/trabajadores/:usuario_creador', async (req, res) => {
 app.put('/api/users/delete/:id', async (req, res) => {
   const { id } = req.params
   try {
-    const [result] = await pool.query(
-      'DELETE FROM usuarios WHERE id_user = ?', [id]
+    const result = await pool.query(
+      'DELETE FROM usuarios WHERE id_user = $1', [id]
     )
-    if (result.affectedRows === 0) {
+    if (result.rowCount === 0) {
       return res.status(409).json({ error:'Usuario no encontrado' })
     }
-    const [rows] = await pool.query('SELECT * FROM usuarios')
-    if (rows.length === 0) {
+    const rows = await pool.query('SELECT * FROM usuarios')
+    if (rows.rows.length === 0) {
       return res.status(409).json({ error: 'Usuario no encontrado' })
     }
     res.json({ message: 'Eliminado con éxito', deletedUser: id })
@@ -491,26 +429,24 @@ app.put('/api/users/delete/:id', async (req, res) => {
   }
 })
 
-
-
 // ---------------------------- GESTIÓN DE PROYECTOS ------------------------------ //
 
 // Crear un nuevo proyecto
 app.post('/api/project', async (req, res) => {
   const { project, description } = req.body
   try {
-    const [result] = await pool.query(
-      `INSERT INTO proyectos (name_proyect, descripcion) VALUES (?, ?)`,
+    const result = await pool.query(
+      `INSERT INTO proyectos (name_proyect, descripcion) VALUES ($1, $2) RETURNING id_proyecto`,
       [project, description]
     )
     res.status(201).json({
-      id_proyecto: result.insertId,
+      id_proyecto: result.rows[0].id_proyecto,
       project,
       description
     })
   } catch (error) {
     console.error('Error al guardar proyecto', error)
-    if (error.code === 'ER_DUP_ENTRY') {
+    if (error.code === '23505') {
       res.status(409).json({ error: 'No se puede crear'})
     } else {
       res.status(500).json({ error: `Fallo al crear proyecto: ${error.message}`})
@@ -521,14 +457,14 @@ app.post('/api/project', async (req, res) => {
 // Obtener todos los proyectos
 app.get('/api/project', async (req, res) => {
   try {
-    const [project] = await pool.query(
+    const project = await pool.query(
       `SELECT
         id_proyecto as id_project,
         name_proyect as name_project,
         descripcion as description 
         FROM proyectos`
     )
-    res.json(project)
+    res.json(project.rows)
   } catch (error) {
     console.error('Error fetching projects:', error.message)
     res.status(500).json({ error: 'Error al obtener proyectos'})
@@ -537,24 +473,23 @@ app.get('/api/project', async (req, res) => {
 
 // Actualizar un proyecto existente
 app.put('/api/project/:id', async (req, res) => {
-  // console.log('PUT /api/project/:id alcanzado')
   const { id } = req.params
   const { project, description } = req.body
   try {
-    const [result] = await pool.query(
-      'UPDATE proyectos SET name_proyect = ?, descripcion = ? WHERE id_proyecto = ?',
+    const result = await pool.query(
+      'UPDATE proyectos SET name_proyect = $1, descripcion = $2 WHERE id_proyecto = $3',
       [project, description, id]
     )
-    if (result.affectedRows === 0){
+    if (result.rowCount === 0){
       return res.status(404).json({ error: 'Proyecto no encontrado'})
     }
 
-    const [rows] = await pool.query('SELECT * FROM proyectos WHERE id_proyecto = ?', [id])
+    const rows = await pool.query('SELECT * FROM proyectos WHERE id_proyecto = $1', [id])
 
-    if (rows.length === 0) {
+    if (rows.rows.length === 0) {
       return res.status(404).json({ error: 'Proyecto actualizado no encontrado' })
     }
-    res.json({ message: 'Actualizado con exito', updatedProject: rows[0]})
+    res.json({ message: 'Actualizado con exito', updatedProject: rows.rows[0]})
     
   } catch (error) {
     console.error('Error al actualizar:', error)
@@ -562,15 +497,13 @@ app.put('/api/project/:id', async (req, res) => {
   }
 })
 
-
-
 // -------------------------- GESTIÓN DE ACTIVIDADES ---------------------------- //
 
 // Obtener todas las actividades (con nombre de usuario y proyecto)
 app.get('/api/tasks/:idAdmin', async (req, res) => {
   const { idAdmin } = req.params
   try {
-    const [task] = await pool.query(`
+    const task = await pool.query(`
       SELECT
         a.id_activities,
         u.nombre AS nombre_asignado,
@@ -583,42 +516,43 @@ app.get('/api/tasks/:idAdmin', async (req, res) => {
         a.avance,
         a.usuario_creador,
         a.fecha_creacion AS creation_raw,
-        DATE_FORMAT(a.fecha_creacion, "%d/%m/%Y") AS creation,
+        TO_CHAR(a.fecha_creacion, 'DD/MM/YYYY') AS creation,
         a.prioridad,
-        DATE_FORMAT(fecha_limite, "%d/%m/%Y") AS limited
+        TO_CHAR(fecha_limite, 'DD/MM/YYYY') AS limited
       FROM actividades a
       INNER JOIN usuarios u ON a.usuario_asignado = u.id_user
       INNER JOIN proyectos p ON a.proyecto = p.id_proyecto
-      WHERE u.usuario_creador = ? AND a.usuario_asignado != ?
+      WHERE u.usuario_creador = $1 AND a.usuario_asignado != $2
     `, [idAdmin, idAdmin])
-    res.json(task)
+    res.json(task.rows)
   } catch (error) {
     console.error('Error fetching tasks:', error.message)
     res.status(500).json({ error: 'Error al obtener actividades'})
   }
 })
 
-// Crear una nueva actividad para un usuario (tambien creando notificación
+// Crear una nueva actividad para un usuario (tambien creando notificación)
 app.post('/api/tasks', async (req, res) => {
   const { usuario_id, proyecto_id, actividad, descripcion, prioridad, fecha_limite, usuario_creador } = req.body;
   if (!prioridad) {
     return res.status(400).json({ error: 'Faltan campos obligatorios'})
-  } try {
-    const [result] = await pool.query(
+  } 
+  try {
+    const result = await pool.query(
       `INSERT INTO actividades (proyecto, actividad, descripcion, usuario_asignado, prioridad, fecha_limite, usuario_creador, avance, horas_trabajadas) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id_activities`,
       [proyecto_id, actividad, descripcion, usuario_id, prioridad, fecha_limite, usuario_creador, 0, 0]
     )
 
+    const idActividad = result.rows[0].id_activities;
     const mensaje = `te asignó una nueva actividad`
     await pool.query(
-      `INSERT INTO notificaciones (usuario_id, mensaje, tipo, id_creador, id_actividad) VALUES (?, ?, 'asignacion', ?, ?)`,
-      [usuario_id, mensaje, usuario_creador, result.insertId]
+      `INSERT INTO notificaciones (usuario_id, mensaje, tipo, id_creador, id_actividad) VALUES ($1, $2, 'asignacion', $3, $4)`,
+      [usuario_id, mensaje, usuario_creador, idActividad]
     )
 
-
     res.status(201).json({
-      id_activities: result.insertId,
+      id_activities: idActividad,
       usuario_id,
       proyecto_id,
       actividad,
@@ -630,7 +564,7 @@ app.post('/api/tasks', async (req, res) => {
     })
   } catch (error) {
     console.error('Error asignar actividas:', error)
-    if (error.code === 'ER_DUP_ENTRY') {
+    if (error.code === '23505') {
       res.status(409).json({ error: 'No se pudo asignar'})
     } else {
       res.status(500).json({ error: `Fallo al asignar actividad: ${error.message}`})
@@ -641,24 +575,53 @@ app.post('/api/tasks', async (req, res) => {
 // Actualizar actividad (nombre, descripción, prioridad, fecha Límite)
 app.put('/api/tasks/:id', async (req, res) => {
   const { id } = req.params
-  const updates = {}
-  if(req.body.fecha_limite) updates.fecha_limite = req.body.fecha_limite
-  if(req.body.actividad) updates.actividad = req.body.actividad
-  if(req.body.descripcion) updates.descripcion = req.body.descripcion
-  if(req.body.prioridad) updates.prioridad = req.body.prioridad
-
+  const { fecha_limite, actividad, descripcion, prioridad } = req.body;
+  
+  const updates = {};
+  const values = [];
+  let index = 1;
+  
+  if(fecha_limite !== undefined) {
+    updates.fecha_limite = fecha_limite;
+    values.push(fecha_limite);
+  }
+  if(actividad !== undefined) {
+    updates.actividad = actividad;
+    values.push(actividad);
+  }
+  if(descripcion !== undefined) {
+    updates.descripcion = descripcion;
+    values.push(descripcion);
+  }
+  if(prioridad !== undefined) {
+    updates.prioridad = prioridad;
+    values.push(prioridad);
+  }
+  
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: 'No se proporcionaron campos para actualizar' });
+  }
+  
+  const setClause = Object.keys(updates)
+    .map((key, i) => `${key} = $${i + 1}`)
+    .join(', ');
+    
+  values.push(id);
+  
   try {
-    const [result] = await pool.query(
-      'UPDATE actividades SET ? WHERE id_activities = ? ', [updates, id]
-    )
-    if (result.affectedRows === 0) {
-      return res.status(409).json({ error: 'Proyecto actualizado no encontrado' })
+    const result = await pool.query(
+      `UPDATE actividades SET ${setClause} WHERE id_activities = $${values.length}`,
+      values
+    );
+    
+    if (result.rowCount === 0) {
+      return res.status(409).json({ error: 'Actividad no encontrada' });
     }
 
-    const [rows] = await pool.query('SELECT * FROM actividades WHERE id_activities = ?', [id])
+    const rows = await pool.query('SELECT * FROM actividades WHERE id_activities = $1', [id])
 
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Proyecto no encontrado' })
+    if (rows.rows.length === 0) {
+      return res.status(404).json({ error: 'Actividad no encontrada' })
     }
 
     res.json({ message: 'Actualizado con exito', updatedTask: { id, ...updates} })
@@ -674,11 +637,11 @@ app.put('/api/tasks/delete/:id', async (req, res) => {
   try {
     // Eliminar registros relacionados
     await pool.query(
-      'DELETE FROM registro_actividad WHERE id_actividad = ?', [id]
+      'DELETE FROM registro_actividad WHERE id_actividad = $1', [id]
     )
 
     await pool.query(
-      'DELETE FROM actividades WHERE id_activities = ?', [id]
+      'DELETE FROM actividades WHERE id_activities = $1', [id]
     )
 
     res.status(200).json({ message: 'Actividad eliminada correctamente' })
@@ -692,21 +655,21 @@ app.put('/api/tasks/delete/:id', async (req, res) => {
 app.get('/api/usuarios/:id/horas-hoy', async (req, res) => {
   const { id } = req.params
   try {
-    const [rows] = await pool.query(`
+    const rows = await pool.query(`
       SELECT SUM(r.horas_trabajadas) AS total_horas
       FROM registro_actividad r
       JOIN actividades a ON r.id_actividad = a.id_activities
-      WHERE a.usuario_asignado = ?
-      AND DATE(r.fecha_actualizacion) = CURDATE()
+      WHERE a.usuario_asignado = $1
+      AND DATE(r.fecha_actualizacion) = CURRENT_DATE
     `, [id])
-    res.json({ toal_horas: rows[0].total_horas || 0 })
+    res.json({ total_horas: rows.rows[0].total_horas || 0 })
   } catch (error) {
     console.error(error)
     res.status(500).json({ error: 'Error al consultar horas del día' })
   }
 })
 
-// Guardar nueva Avtividad
+// Guardar nueva Actividad
 app.post('/api/tasks/admin', async (req, res) => {
   const {
     usuario_id,
@@ -719,26 +682,26 @@ app.post('/api/tasks/admin', async (req, res) => {
     horas,
   } = req.body
 
-  const connection = await pool.getConnection()
+  const client = await pool.connect()
   try {
-    await connection.beginTransaction()
+    await client.query('BEGIN')
 
-    const [result] = await connection.query(`
+    const result = await client.query(`
       INSERT INTO actividades (
         proyecto, actividad, descripcion, prioridad,
         fecha_creacion, usuario_asignado, avance, horas_trabajadas, fecha_limite
-      ) VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, NOW())`,
+      ) VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7, NOW()) RETURNING id_activities`,
       [proyecto_id, actividad, descripcion, prioridad, usuario_creador, avance, horas]  
     )
-    const idActividad = result.insertId
+    const idActividad = result.rows[0].id_activities
 
     // Insertar en registro_actividad
-    await connection.query(`
+    await client.query(`
       INSERT INTO registro_actividad (id_actividad, avance, horas_trabajadas, fecha_actualizacion)
-        VALUES (?, ?, ?, NOW())    
+        VALUES ($1, $2, $3, NOW())    
     `, [idActividad, avance, horas])
 
-    await connection.commit()
+    await client.query('COMMIT')
 
     res.status(201).json({
       id_activities: idActividad,
@@ -751,16 +714,16 @@ app.post('/api/tasks/admin', async (req, res) => {
       usuario_creador
     })
   } catch (error) {
-    await connection.rollback()
+    await client.query('ROLLBACK')
     console.error('Error al asignar actividad y registrar avance:', error)
 
-    if (error.code === 'ER_DUP_ENTRY') {
+    if (error.code === '23505') {
       res.status(409).json({ error: 'No se puedo asignar, entrada duplicada' })
     } else {
       res.status(500).json({ error: `Fallo al asignar actividad: ${error.message}`})
     }
   } finally {
-    connection.release()
+    client.release()
   }
 })
 
@@ -770,12 +733,12 @@ app.put('/api/actividades/:id', async (req, res) => {
   const { actividad, descripcion } = req.body
 
   try {
-    const [result] = await pool.query(
-      'UPDATE actividades SET actividad = ?, descripcion = ? WHERE id_activities = ?',
+    const result = await pool.query(
+      'UPDATE actividades SET actividad = $1, descripcion = $2 WHERE id_activities = $3',
       [actividad, descripcion, id]
     )
 
-    if (result.affectedRows === 0) {
+    if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Actividad no encontrada' })
     }
 
@@ -792,37 +755,28 @@ app.put('/api/actividades/:id/avance', async (req, res) => {
   const { horas_trabajadas, avance } = req.body
 
   try {
-
-    // await pool.query(`
-    //   UPDATE actividades SET 
-    //     avance = ?, horas_trabajadas = ?
-    //   WHERE id_activities = ?
-    // `, [avance, horas_trabajadas, id])
-
     await pool.query(`
       INSERT INTO registro_actividad (id_actividad, horas_trabajadas, avance, fecha_actualizacion)
-        VALUES (?, ?, ?, NOW())`,
+        VALUES ($1, $2, $3, NOW())`,
       [id, horas_trabajadas, avance]
     )
 
     // Obtener la suma total de horas trabajadas
-    const [[{ totalHoras }]] = await pool.query(`
+    const totalHorasResult = await pool.query(`
       SELECT SUM(horas_trabajadas) AS totalHoras
       FROM registro_actividad
-      WHERE id_actividad = ? 
+      WHERE id_actividad = $1 
     `, [id])
 
     // Actualizar actividades con la suma de horas y fecha limite
     await pool.query(`
       UPDATE actividades
       SET
-        horas_trabajadas = ?,
+        horas_trabajadas = $1,
         fecha_limite = NOW(),
-        avance = ?
-      WHERE id_activities = ?
-    `, [totalHoras || 0, avance, id])
-
-
+        avance = $2
+      WHERE id_activities = $3
+    `, [totalHorasResult.rows[0].totalhoras || 0, avance, id])
 
     res.json({ message: 'Registro de actividad actualizado correctamente' })
   } catch (error) {
@@ -836,7 +790,7 @@ app.get('/api/actividades/:id_usuario', async (req, res) => {
   const { id_usuario } = req.params;
 
   try {
-    const [tasks] = await pool.query(`
+    const tasks = await pool.query(`
       SELECT
         a.id_activities,
         a.actividad,
@@ -846,14 +800,14 @@ app.get('/api/actividades/:id_usuario', async (req, res) => {
         a.fecha_creacion,
         a.fecha_limite,
         p.name_proyect,
-        IFNULL(SUM(r.horas_trabajadas), 0) AS horas_trabajadas
+        COALESCE(SUM(r.horas_trabajadas), 0) AS horas_trabajadas
       FROM actividades a
       LEFT JOIN registro_actividad r ON a.id_activities = r.id_actividad
       LEFT JOIN proyectos p ON a.proyecto = p.id_proyecto
-      WHERE a.usuario_asignado = ?
+      WHERE a.usuario_asignado = $1
       GROUP BY a.id_activities, p.name_proyect
     `, [id_usuario]);
-      res.json(tasks)
+      res.json(tasks.rows)
   } catch (error) {
     console.error('Error al obtener actividades:', error.message);
     res.status(500).json({ error: 'Error al obtener actividades' });
@@ -864,15 +818,15 @@ app.get('/api/actividades/:id_usuario', async (req, res) => {
 app.get('/api/estadisticas/:idUser', async (req, res) => {
   const { idUser } = req.params
   try {
-    const [result] = await pool.query(`
+    const result = await pool.query(`
       SELECT
         COUNT(CASE WHEN avance = 100 THEN 1 END) AS tareasCompletadas,
         COUNT(CASE WHEN avance < 100 THEN 1 END) AS enProgreso,
         COUNT(*) AS tareasTotales
       FROM actividades
-      WHERE usuario_asignado = ?
+      WHERE usuario_asignado = $1
     `, [idUser])
-    res.json(result[0])
+    res.json(result.rows[0])
   } catch (error) {
     console.error('Error al obtener datos:', error.message)
     res.status(500).json({ error: 'Error al obtener estadisticas' })
@@ -883,24 +837,23 @@ app.get('/api/estadisticas/:idUser', async (req, res) => {
 app.get('/api/registros-avances/:idActividad', async (req, res) => {
   const { idActividad } = req.params
   try {
-    const [rows] = await pool.query(`
+    const rows = await pool.query(`
       SELECT avance, fecha_actualizacion
       FROM registro_actividad
-      WHERE id_actividad = ?
+      WHERE id_actividad = $1
       ORDER BY fecha_actualizacion DESC
     `, [idActividad])
     
-    res.json(rows)
+    res.json(rows.rows)
   } catch (err) {
     console.error(err)
     res.status(500).json({ message: 'Error al obtener los registros de avance' })
   }
 })
-
 // Función para generar reporte
 async function generarReporteQuincenalPDF(usuarioId) {
   try {
-    const [[userInfo]] = await pool.query(`
+    const userInfoResult = await pool.query(`
       SELECT 
         u.nombre AS nombre,
         u.paterno AS paterno,
@@ -908,13 +861,15 @@ async function generarReporteQuincenalPDF(usuarioId) {
         d.nombre_dependencia AS dependencia
       FROM usuarios u
       LEFT JOIN dependencias d ON u.dependencia_id = d.id_dependencia
-      WHERE u.id_user = ?
+      WHERE u.id_user = $1
     `, [usuarioId]);
+    
+    const userInfo = userInfoResult.rows[0];
 
     const nombreCompleto = `${userInfo?.nombre || ''} ${userInfo?.paterno || ''} ${userInfo?.materno || ''}`.trim();
 
     // Generar iniciales
-    const iniciales = `${userInfo?.nombre?.charAt(0) || ''}${userInfo?.paterno?.charAt(0) || ''}${userInfo.materno?.charAt(0) || ''}`.toUpperCase()
+    const iniciales = `${userInfo?.nombre?.charAt(0) || ''}${userInfo?.paterno?.charAt(0) || ''}${userInfo?.materno?.charAt(0) || ''}`.toUpperCase();
 
     const hoy = new Date();
     const year = hoy.getFullYear();
@@ -930,7 +885,7 @@ async function generarReporteQuincenalPDF(usuarioId) {
     const fechaInicioStr = inicioQuincena.toISOString().split('T')[0];
     const fechaFinStr = finQuincena.toISOString().split('T')[0];
 
-    const [rows] = await pool.query(`
+    const actividadesResult = await pool.query(`
       SELECT 
         p.name_proyect AS proyecto,
         a.actividad,
@@ -943,12 +898,14 @@ async function generarReporteQuincenalPDF(usuarioId) {
       LEFT JOIN proyectos p ON a.proyecto = p.id_proyecto
       LEFT JOIN registro_actividad r
         ON r.id_actividad = a.id_activities
-        AND r.fecha_actualizacion BETWEEN ? AND ?
-      WHERE a.usuario_asignado = ?
+        AND r.fecha_actualizacion BETWEEN $1 AND $2
+      WHERE a.usuario_asignado = $3
         AND a.estado <> 'rechazada'
       GROUP BY p.name_proyect, a.id_activities
       ORDER BY p.name_proyect, a.fecha_creacion
     `, [fechaInicioStr, fechaFinStr, usuarioId]);
+    
+    const rows = actividadesResult.rows;
 
     const proyectosMap = {};
     rows.forEach(row => {
@@ -1085,8 +1042,10 @@ async function guardarReporte({ pdfBuffer, nombreArchivo, periodoTexto, usuarioI
     // Guardar en BD
     const result = await pool.query(`
       INSERT INTO reportes_generados (usuario_id, nombre_archivo, ruta, periodo, fecha_generacion)
-      VALUES (?, ?, ?, ?, NOW())
+      VALUES ($1, $2, $3, $4, NOW())
+      RETURNING id
     `, [usuarioId, nombreArchivo, rutaCompleta, periodoTexto]);
+    
     return rutaCompleta;
 
   } catch (error) {
@@ -1098,13 +1057,14 @@ async function guardarReporte({ pdfBuffer, nombreArchivo, periodoTexto, usuarioI
 // Generar automaticamente el dia 15 y ultimo de cada mes a las 23:59
 async function cargarUsuarios() {
   try {
-    const [usuarios] = await pool.query(`
-      SELECT id_user FROM usuarios WHERE activo = 1
-    `)
-    return usuarios.map(u => ({ id_user: u.id_user }))
+    const usuariosResult = await pool.query(`
+      SELECT id_user FROM usuarios WHERE activo = true
+    `);
+    
+    return usuariosResult.rows.map(u => ({ id_user: u.id_user }));
   } catch (error) {
-    console.error('Error en cargarUsuarios:', error)
-    throw error
+    console.error('Error en cargarUsuarios:', error);
+    throw error;
   }
 }
 
@@ -1115,7 +1075,7 @@ function configuracionGenerarReportes() {
       const dia = hoy.getDate();
       const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate();
 
-      if (dia !== 15 && dia !== ultimoDiaMes) return
+      if (dia !== 15 && dia !== ultimoDiaMes) return;
 
       console.log(`[${new Date().toISOString()}] Cron: generando reportes quincenales (día ${dia})`);
       const usuarios = await cargarUsuarios();
@@ -1141,8 +1101,8 @@ function configuracionGenerarReportes() {
 app.get('/api/reportes-generados/:usuarioId', async (req, res) => {
   const { usuarioId } = req.params;
   try {
-    const [rows] = await pool.query(
-      'SELECT * FROM reportes_generados WHERE usuario_id = ? ORDER BY fecha_generacion DESC',
+    const result = await pool.query(
+      'SELECT * FROM reportes_generados WHERE usuario_id = $1 ORDER BY fecha_generacion DESC',
       [usuarioId]
     );
 
@@ -1161,7 +1121,7 @@ app.get('/api/reportes-generados/:usuarioId', async (req, res) => {
       'dic': 'diciembre'
     };
 
-    const reportesFormateados = rows.map(r => {
+    const reportesFormateados = result.rows.map(r => {
       let periodoFormateado = r.periodo;
 
       if (r.periodo.includes('-')) {
@@ -1187,26 +1147,24 @@ app.get('/api/reportes-generados/:usuarioId', async (req, res) => {
 
 // Descargar pdf desde reportes
 app.get('/api/reportes-generados/:id/descargar', async (req, res) => {
-
-  const { id } = req.params
+  const { id } = req.params;
   try {
-    const [rows] = await pool.query(
-      'SELECT ruta, nombre_archivo FROM reportes_generados WHERE id = ?',
+    const result = await pool.query(
+      'SELECT ruta, nombre_archivo FROM reportes_generados WHERE id = $1',
       [id]
-    )
+    );
 
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'Reporte no encontrado' })
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Reporte no encontrado' });
     }
 
-    const { ruta, nombre_archivo } = rows[0]
-    res.download(ruta, nombre_archivo) // envía el archivo
+    const { ruta, nombre_archivo } = result.rows[0];
+    res.download(ruta, nombre_archivo); // envía el archivo
   } catch (error) {
-    console.error(error)
-    res.status(500).json({ message: 'Error al descargar el reporte' })
+    console.error(error);
+    res.status(500).json({ message: 'Error al descargar el reporte' });
   }
-})
-
+});
 
 // -------------------------- PERFIL DEL ADMIN ---------------------------- //
 
@@ -1222,7 +1180,7 @@ app.post('/api/usuarios/:id/imagen', upload.single('imagen'), async (req, res) =
   const ruta = `/uploads/usuarios/${req.file.filename}`;
 
   try {
-    await pool.query('UPDATE usuarios SET imagen = ? WHERE id_user = ?', [ruta, id]);
+    await pool.query('UPDATE usuarios SET imagen = $1 WHERE id_user = $2', [ruta, id]);
     res.json({ success: true, ruta });
   } catch (error) {
     console.error('Error al subir imagen:', error);
@@ -1235,13 +1193,13 @@ app.get('/api/usuarios/:id/imagen', async (req, res) => {
   const { id } = req.params;
 
   try {
-    const [rows] = await pool.query('SELECT imagen FROM usuarios WHERE id_user = ?', [id]);
+    const result = await pool.query('SELECT imagen FROM usuarios WHERE id_user = $1', [id]);
 
-    if (rows.length === 0) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    const imagen = rows[0].imagen;
+    const imagen = result.rows[0].imagen;
     res.json({ success: true, imagen });
   } catch (error) {
     console.error('Error al obtener imagen:', error);
@@ -1251,93 +1209,85 @@ app.get('/api/usuarios/:id/imagen', async (req, res) => {
 
 // Actualizar datos del usuario
 app.put('/api/usuarios/:id', async (req, res) => {
-  const { id } = req.params
-  const { nombre, paterno, materno, email, telefono } = req.body
+  const { id } = req.params;
+  const { nombre, paterno, materno, email, telefono } = req.body;
 
   try {
-    const [result] = await pool.query(`
+    const result = await pool.query(`
       UPDATE usuarios SET
-        nombre = ?,
-        paterno = ?,
-        materno = ?,
-        email = ?,
-        telefono = ?
-      WHERE id_user = ?`, 
+        nombre = $1,
+        paterno = $2,
+        materno = $3,
+        email = $4,
+        telefono = $5
+      WHERE id_user = $6
+      RETURNING *`,
       [nombre, paterno, materno, email, telefono, id]
-    )
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Usuario no encontrado' })
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
     }
     
-    const [rows] = await pool.query(`SELECT * FROM usuarios WHERE id_user = ?`, [id])
-    res.json({ message: 'Usuaro actualizado con exito' })
+    res.json({ message: 'Usuario actualizado con éxito' });
   } catch (error) {
-    console.error('Error al actualiza usuario:', error.message, error.stack)
-    res.status(500).json({ error: 'Error interno del servidor' })
+    console.error('Error al actualizar usuario:', error.message, error.stack);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
-})
+});
 
 // Verificar password actual
 app.post('/api/usuarios/verificar-password/:id', async (req, res) => {
-  const { id } = req.params
-  const { password } = req.body
+  const { id } = req.params;
+  const { password } = req.body;
 
   try {
-    const [rows] = await pool.query('SELECT * FROM usuarios WHERE id_user = ?', [id])
+    const result = await pool.query('SELECT * FROM usuarios WHERE id_user = $1', [id]);
 
-    if (rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Usuario no encontrado' })
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
     }
 
-    const user = rows[0]
-    // console.log('password recibido', password)
-    // console.log('password almacenado', user.password_hash)
-    const esValida = await bcrypt.compare(password, user.password_hash)
+    const user = result.rows[0];
+    const esValida = await bcrypt.compare(password, user.password_hash);
 
-    res.json({ success: true, esValida })
+    res.json({ success: true, esValida });
   } catch (error) {
-    console.error('Error al verificar la contraseña:', error)
-    res.status(500).json({ success: false, message: 'Error del servidor' })
+    console.error('Error al verificar la contraseña:', error);
+    res.status(500).json({ success: false, message: 'Error del servidor' });
   }
-})
+});
 
 // Actualizar contraseña
 app.put('/api/usuarios/:id/password', async (req, res) => {
-  const { id } = req.params
-  const { currentPassword, newPassword } = req.body
+  const { id } = req.params;
+  const { currentPassword, newPassword } = req.body;
 
   try {
-    const [rows] = await pool.query('SELECT password_hash FROM usuarios WHERE id_user = ?', [id])
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'Usuario no encontrado' })
+    const result = await pool.query('SELECT password_hash FROM usuarios WHERE id_user = $1', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-    const hashedPassword = rows[0].password_hash
-
-    console.log('* Contraseña ingresada en el input:', currentPassword)
-    console.log('* Hash almacenado en la BD:', hashedPassword)
-
-    const isMatch = await bcrypt.compare(currentPassword, hashedPassword)
-
-    console.log('* Coinciden?', isMatch)
+    const hashedPassword = result.rows[0].password_hash;
+    const isMatch = await bcrypt.compare(currentPassword, hashedPassword);
 
     if (!isMatch) {
-      return res.status(401).json({ success: false, message: 'La contraseña actual no es correcta' })
+      return res.status(401).json({ success: false, message: 'La contraseña actual no es correcta' });
     }
 
-    const saltRounds = 10
-    const newHashedPassword = await bcrypt.hash(newPassword, saltRounds)
+    const saltRounds = 10;
+    const newHashedPassword = await bcrypt.hash(newPassword, saltRounds);
 
-    await pool.query('UPDATE usuarios SET password_hash = ? WHERE id_user = ?', [newHashedPassword, id])
+    await pool.query('UPDATE usuarios SET password_hash = $1 WHERE id_user = $2', [newHashedPassword, id]);
     
-    return res.status(200).json({ success: true, message: 'Contraseña actualizada correctamente' })
+    return res.status(200).json({ success: true, message: 'Contraseña actualizada correctamente' });
    
   } catch (error) {
-    console.error('Error al actualizar la contraseña:', error)
-    return res.status(500).json({ success: false, message: 'Error en el servidor' })
+    console.error('Error al actualizar la contraseña:', error);
+    return res.status(500).json({ success: false, message: 'Error en el servidor' });
   }
-})
-
+});
 
 configuracionGenerarReportes();
 app.listen(PORT, () => {
